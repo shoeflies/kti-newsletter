@@ -126,18 +126,13 @@ def check_news_relevance(news_title, news_description, business_content):
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    max_output_tokens=10,
+                    max_output_tokens=100,  # 충분한 토큰 할당
                     temperature=0.3,
                 )
             )
 
             # New SDK: response.text directly accessible
             answer = response.text.strip() if response.text else ""
-
-            # 디버그: 응답 확인
-            if not answer:
-                print(f"    [DEBUG] Empty response from API")
-                print(f"    [DEBUG] Response object: {response}")
 
             try:
                 score = int(answer) if answer else 0
@@ -148,7 +143,6 @@ def check_news_relevance(news_title, news_description, business_content):
                     return 0
             except ValueError:
                 print(f"Warning: Could not parse score '{answer}', defaulting to 0")
-                print(f"    [DEBUG] Raw answer: '{answer}'")
                 return 0
 
         except Exception as e:
@@ -193,10 +187,6 @@ def filter_news_by_relevance(news_data, company_info, threshold=6, beta_mode=Fal
             )
             filtered_news_data[company] = news_list
             continue
-
-        # 디버그: 첫 번째 뉴스에 대해 회사 정보 출력
-        if news_list:
-            print(f"\n[DEBUG] {company} - Business content: {business_content[:100]}...")
 
         filtered_news = []
         for news_item in news_list:
