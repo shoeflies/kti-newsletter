@@ -94,27 +94,67 @@ def filter_similar_titles(titles, threshold=0.60, return_cluster_info=False):
         return [idx for _, _, idx, _ in unique_titles]
 
 
-def check_news_relevance(news_title, news_description, business_content):
+def check_news_relevance(news_title, news_description, business_content,
+                         company_name="", keywords=None,
+                         enable_keyword_prefilter=True, enable_keyword_in_prompt=True):
     """
     뉴스 기사가 회사 사업 내용과 얼마나 관련이 있는지 0-10 점수로 평가
+
+    Args:
+        news_title: 뉴스 제목
+        news_description: 뉴스 내용
+        business_content: 회사 사업 내용
+        company_name: 회사명
+        keywords: 키워드 리스트 (예: ["힐링페이퍼", "강남언니", "UNNI"])
+        enable_keyword_prefilter: 사전 키워드 필터링 활성화
+        enable_keyword_in_prompt: 프롬프트에 키워드 정보 포함
     """
     max_retries = 4
     wait_times = [5, 15, 30, 60]  # 429 시 대기 (초)
 
+    # 키워드 리스트 준비
+    if keywords is None:
+        keywords = []
+
+    # A. 사전 키워드 필터링
+    if enable_keyword_prefilter and (company_name or keywords):
+        news_text = f"{news_title} {news_description}".lower()
+        all_keywords = [company_name] + keywords if company_name else keywords
+
+        # 키워드 중 하나라도 뉴스에 포함되어 있는지 확인
+        has_keyword = any(kw.lower() in news_text for kw in all_keywords if kw)
+
+        if not has_keyword:
+            # print(f"    [Prefilter] No keyword found in news - returning 0")
+            return 0
+
+    # B. 프롬프트에 키워드 정보 포함
     system_instruction = "당신은 뉴스 기사와 회사 사업의 관련성을 평가하는 전문가입니다. 0-10 사이의 숫자로만 답변하세요."
+
+    # 키워드 정보 추가
+    keyword_info = ""
+    if enable_keyword_in_prompt and (company_name or keywords):
+        keyword_info = f"""
+    회사명: {company_name}
+    관련 키워드: {', '.join(keywords)}
+
+    ⚠️ 중요: 뉴스 제목이나 내용에 회사명 또는 관련 키워드가 명시적으로 언급되어야 높은 점수를 받을 수 있습니다.
+    키워드가 전혀 포함되지 않았지만 사업 분야만 유사한 경우 최대 3점까지만 부여하세요.
+    """
+
     prompt = f"""다음 뉴스 기사가 회사의 사업 내용과 얼마나 관련이 있는지 0-10 점수로 평가해주세요.
 
     뉴스 제목: {news_title}
     뉴스 내용: {news_description}
 
-    회사 사업 내용: {business_content}
+    회사 사업 내용: {business_content}{keyword_info}
 
     평가 기준:
-    - 10점: 회사의 핵심 사업/제품/서비스에 직접적으로 관련된 뉴스
-    - 7-9점: 회사의 사업 분야와 밀접하게 관련된 뉴스
-    - 4-6점: 회사가 속한 산업이나 시장과 간접적으로 관련된 뉴스
-    - 1-3점: 회사명은 언급되지만 사업과 거의 관련 없는 뉴스
-    - 0점: 완전히 관련 없는 뉴스 (동음이의어, 오타 등)
+    - 10점: 회사명/키워드가 명시되고 핵심 사업에 직접 관련된 뉴스
+    - 7-9점: 회사명/키워드가 명시되고 사업 분야와 밀접하게 관련된 뉴스
+    - 4-6점: 회사명/키워드가 명시되고 산업/시장과 간접적으로 관련된 뉴스
+    - 1-3점: 회사명만 언급되거나 키워드 없이 산업만 유사한 뉴스
+    - 0점: 완전히 관련 없는 뉴스 (동음이의어, 오타, 키워드 없음)
 
     0-10 사이의 숫자만 답변해주세요."""
 
@@ -167,10 +207,24 @@ def check_news_relevance(news_title, news_description, business_content):
     return 0
 
 
-def filter_news_by_relevance(news_data, company_info, threshold=6, beta_mode=False):
+def filter_news_by_relevance(news_data, company_info, threshold=6, beta_mode=False,
+                            enable_keyword_prefilter=True, enable_keyword_in_prompt=True):
     """
     AI 기반 관련성 점수로 뉴스 필터링
+
+    Args:
+        news_data: 뉴스 데이터
+        company_info: 회사 정보
+        threshold: 관련성 임계값
+        beta_mode: 베타 모드
+        enable_keyword_prefilter: 사전 키워드 필터링 활성화
+        enable_keyword_in_prompt: 프롬프트에 키워드 정보 포함
     """
+    from utils.data_loader import load_filter_config
+
+    # 설정 로드 (함수 파라미터로 전달된 것 우선)
+    config = load_filter_config()
+
     filtered_news_data = {}
     total_news = 0
     filtered_news_count = 0
@@ -188,12 +242,25 @@ def filter_news_by_relevance(news_data, company_info, threshold=6, beta_mode=Fal
             filtered_news_data[company] = news_list
             continue
 
+        # 키워드 추출 (예: "힐링페이퍼 / 강남언니 / UNNI" → ["힐링페이퍼", "강남언니", "UNNI"])
+        keyword_raw = company_info.get(company, {}).get("keyword", [])
+        if keyword_raw and keyword_raw[0]:
+            keywords = [kw.strip() for kw in keyword_raw[0].split("/")]
+        else:
+            keywords = []
+
         filtered_news = []
         for news_item in news_list:
             total_news += 1
             title, description, link = news_item
 
-            score = check_news_relevance(title, description, business_content)
+            score = check_news_relevance(
+                title, description, business_content,
+                company_name=company,
+                keywords=keywords,
+                enable_keyword_prefilter=enable_keyword_prefilter,
+                enable_keyword_in_prompt=enable_keyword_in_prompt
+            )
 
             print(f"  [{company}] Score: {score}/10 - {title[:50]}...")
 

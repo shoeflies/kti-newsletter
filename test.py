@@ -181,14 +181,21 @@ async def main():
     if enable_relevance_filter:
         print("\n=== Step 2: AI-based relevance filtering ===")
         relevance_threshold = filter_cfg["relevance_threshold"]
+        enable_keyword_prefilter = filter_cfg.get("enable_keyword_prefilter", True)
+        enable_keyword_in_prompt = filter_cfg.get("enable_keyword_in_prompt", True)
+
         print(f"Threshold: {relevance_threshold}, Beta mode: {beta_test_mode}")
+        print(f"Keyword prefilter: {'ON' if enable_keyword_prefilter else 'OFF'}")
+        print(f"Keyword in prompt: {'ON' if enable_keyword_in_prompt else 'OFF'}")
 
         # AI 관련성 필터링 적용
         filtered_news_dict = filter_news_by_relevance(
             news_dict,
             company_info,
             threshold=relevance_threshold,
-            beta_mode=beta_test_mode
+            beta_mode=beta_test_mode,
+            enable_keyword_prefilter=enable_keyword_prefilter,
+            enable_keyword_in_prompt=enable_keyword_in_prompt
         )
 
         # 필터링된 결과로 업데이트

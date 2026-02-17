@@ -39,7 +39,7 @@ def load_company_info_from_csv(csv_path="portfolio_news_data.csv"):
             keyword_for_list = keyword_str if keyword_str else name
             company_info[name] = {
                 "keyword": [keyword_for_list],
-                "comment": comment,
+                "comment": [comment],  # 리스트로 저장 (main.py/test.py KT 추가 방식과 일관성)
                 "manager": managers,
             }
     return company_info
@@ -49,12 +49,20 @@ def load_filter_config():
     """
     filter_config.json에서 AI 관련성 필터 설정 로드.
     파일이 없거나 키가 없으면 환경 변수로 폴백.
-    반환: {"enable_relevance_filter": bool, "relevance_threshold": int, "beta_test_mode": bool}
+    반환: {
+        "enable_relevance_filter": bool,
+        "relevance_threshold": int,
+        "beta_test_mode": bool,
+        "enable_keyword_prefilter": bool,
+        "enable_keyword_in_prompt": bool
+    }
     """
     out = {
         "enable_relevance_filter": True,
         "relevance_threshold": 6,
         "beta_test_mode": False,
+        "enable_keyword_prefilter": True,
+        "enable_keyword_in_prompt": True,
     }
     if os.path.isfile(FILTER_CONFIG_PATH):
         try:
@@ -68,6 +76,12 @@ def load_filter_config():
             if "beta_test_mode" in data:
                 v = data["beta_test_mode"]
                 out["beta_test_mode"] = v if isinstance(v, bool) else str(v).lower() in ("true", "1")
+            if "enable_keyword_prefilter" in data:
+                v = data["enable_keyword_prefilter"]
+                out["enable_keyword_prefilter"] = v if isinstance(v, bool) else str(v).lower() in ("true", "1")
+            if "enable_keyword_in_prompt" in data:
+                v = data["enable_keyword_in_prompt"]
+                out["enable_keyword_in_prompt"] = v if isinstance(v, bool) else str(v).lower() in ("true", "1")
         except (json.JSONDecodeError, TypeError, ValueError):
             pass
     # 환경 변수로 덮어쓰기 (선택)
