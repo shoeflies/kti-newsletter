@@ -22,7 +22,7 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Repository: ${{ github.repository }}"
           echo "Branch: ${{ github.ref }}"
-          echo "Test Mode: Sending to godjsw1@gmail.com only"
+          echo "Test Mode: Enabled"
 
       - name: Install dependencies
         run: |
@@ -40,11 +40,11 @@ jobs:
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           EMAIL_LOGIN: ${{ secrets.EMAIL_LOGIN }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          TEST_EMAIL: "godjsw1@gmail.com"
+          TEST_EMAIL: ${{ secrets.TEST_EMAIL || 'godjsw1@gmail.com' }}
         run: |
           echo "========================================="
           echo "테스트 모드: 5개 회사만 처리"
-          echo "수신자: godjsw1@gmail.com"
+          echo "수신자: $TEST_EMAIL"
           echo "베타 테스트 모드: 활성화"
           echo "========================================="
           python test.py
