@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 import numpy as np
 import time
 import os
@@ -119,14 +120,15 @@ def check_news_relevance(news_title, news_description, business_content):
 
     for attempt in range(max_retries):
         try:
-            # New API: client.models.generate_content with config parameter
+            # New API: client.models.generate_content with GenerateContentConfig
             response = client.models.generate_content(
                 model=GENERATION_MODEL_NAME,
-                contents=f"{system_instruction}\n\n{prompt}",
-                config={
-                    "max_output_tokens": 10,
-                    "temperature": 0.3,
-                }
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    max_output_tokens=10,
+                    temperature=0.3,
+                )
             )
 
             # New SDK: response.text directly accessible
