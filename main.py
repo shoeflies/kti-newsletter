@@ -31,6 +31,13 @@ news_dict = {}
 company_info = load_company_info_from_csv()
 user_info = load_json("user_info.json")
 
+# KT 수동 추가 (CSV에 없는 회사)
+company_info["KT"] = {
+    "comment": ["국내 최대 통신사이자 디지털 플랫폼 기업으로 ICT, 금융사업, 위성방송서비스사업, 기타사업 등을 영위"],
+    "keyword": ["KT / 케이티"],
+    "manager": []  # 담당자 없음
+}
+
 
 def reorder_news_dict(news_dict, user_companies):
     reordered_dict = {}
@@ -65,8 +72,10 @@ def generate_email_subject(news_data, user_companies):
     max_pre_filter_count = 0
     max_company = None
 
-    # 필터링 전 기사 개수가 가장 많은 회사 찾기
+    # 필터링 전 기사 개수가 가장 많은 회사 찾기 (KT 제외)
     for company, data in news_data.items():
+        if company == "KT":  # KT는 제목 생성 대상에서 제외
+            continue
         pre_filter_count = data.get("pre_filter_count", 0)
         if pre_filter_count > max_pre_filter_count:
             max_pre_filter_count = pre_filter_count
@@ -91,10 +100,10 @@ def generate_email_subject(news_data, user_companies):
             # 클러스터 정보가 없으면 첫 번째 뉴스 선택
             representative_news = news_list[0]
 
-    # 뉴스 제목 요약 (20글자로 자르기)
+    # 뉴스 제목 요약 (30글자로 자르기)
     if representative_news:
         title = representative_news[0]
-        summary = title[:20] + ("..." if len(title) > 20 else "")
+        summary = title[:30] + ("..." if len(title) > 30 else "")
     else:
         summary = "업데이트"
 

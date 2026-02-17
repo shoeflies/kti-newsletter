@@ -1,63 +1,7 @@
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-
-def send_email(content, recipients, subject=None):
-    # SMTP 서버 설정
-    smtp_server = os.environ.get("SMTP_SERVER")
-    smtp_port = int(os.environ.get("SMTP_PORT", 587))
-    email_login = os.environ.get("EMAIL_LOGIN")
-    email_password = os.environ.get("EMAIL_PASSWORD")
-    email_password = email_password.replace("-", " ")
-
-    print(f"Attempting to send email to: {recipients}")
-    print(f"Using SMTP server: {smtp_server}:{smtp_port}")
-
-    # 수신자가 비어있는 경우 처리
-    if not recipients:
-        print("Warning: No recipients specified")
-        return
-
-    try:
-        # recipients가 리스트인 경우 문자열로 변환
-        if isinstance(recipients, list):
-            recipients_str = ", ".join(recipients)
-        else:
-            recipients_str = recipients
-
-        # 메시지 생성
-        msg = MIMEMultipart("alternative")
-        if subject is None:
-            subject = "KTI Portfolio Daily News"
-        msg["Subject"] = subject
-        msg["From"] = email_login
-        msg["To"] = recipients_str
-
-        # HTML 형식의 본문 추가
-        html_part = MIMEText(content, "html")
-        msg.attach(html_part)
-
-        # SMTP 연결 및 전송
-        send_to = recipients if isinstance(recipients, list) else [recipients]
-
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(email_login, email_password)
-            server.sendmail(email_login, send_to, msg.as_string())
-            print("Email sent successfully!")
-
-    except Exception as e:
-        print(f"Failed to send email: {str(e)}")
-        print(f"Recipients: {recipients}")
-        raise
-
+"""
+이메일 HTML 미리보기 생성 (독립 실행)
+환경 변수 없이 순수 HTML만 생성
+"""
 
 def get_email_styles():
     """이메일 CSS 스타일"""
@@ -344,7 +288,7 @@ def get_header_html(user_name):
 
 
 def get_update_notice_html():
-    """업데이트 공지 박스"""
+    """업데이트 공지 박스 - margin: 0 적용 확인용"""
     return """
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
@@ -362,7 +306,22 @@ def get_update_notice_html():
     """
 
 
-def get_news_card_html(news_item, beta_test_mode, relevance_threshold):
+def get_section_header_html(title):
+    """섹션 헤더"""
+    return f"""
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td style="padding: 20px 16px 10px 16px;">
+                    <h2 style="color: #090B43; font-size: 22px; font-weight: 700; margin: 0; border-bottom: 2px solid #D93931; padding-bottom: 8px;">
+                        {title}
+                    </h2>
+                </td>
+            </tr>
+        </table>
+    """
+
+
+def get_news_card_html(news_item, beta_test_mode=True, relevance_threshold=6):
     """개별 뉴스 카드"""
     if len(news_item) == 4:
         title, description, url, score = news_item
@@ -391,23 +350,8 @@ def get_news_card_html(news_item, beta_test_mode, relevance_threshold):
         """
 
 
-def get_section_header_html(title):
-    """섹션 헤더"""
-    return f"""
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr>
-                <td style="padding: 20px 16px 10px 16px;">
-                    <h2 style="color: #090B43; font-size: 22px; font-weight: 700; margin: 0; border-bottom: 2px solid #D93931; padding-bottom: 8px;">
-                        {title}
-                    </h2>
-                </td>
-            </tr>
-        </table>
-    """
-
-
-def _render_company_news(company, news_detail, beta_test_mode, relevance_threshold):
-    """개별 회사의 뉴스 렌더링 (헬퍼 함수)"""
+def render_company_news(company, news_detail, beta_test_mode, relevance_threshold):
+    """개별 회사의 뉴스 렌더링"""
     keywords = " / ".join(news_detail["keyword"])
 
     html = f"""
@@ -433,7 +377,7 @@ def _render_company_news(company, news_detail, beta_test_mode, relevance_thresho
 
 
 def get_companies_html(news_data, beta_test_mode, relevance_threshold, user_companies=None):
-    """회사 섹션 (담당/비담당 구분)"""
+    """회사 섹션 (담당/비담당/KT 구분)"""
     html = ""
 
     # 담당 포트폴리오 섹션
@@ -442,7 +386,7 @@ def get_companies_html(news_data, beta_test_mode, relevance_threshold, user_comp
 
         for company in user_companies:
             if company in news_data and company != "KT":  # KT 제외
-                html += _render_company_news(company, news_data[company], beta_test_mode, relevance_threshold)
+                html += render_company_news(company, news_data[company], beta_test_mode, relevance_threshold)
 
         # 기타 포트폴리오 섹션
         other_companies = [c for c in news_data.keys() if c not in user_companies and c != "KT"]  # KT 제외
@@ -450,22 +394,22 @@ def get_companies_html(news_data, beta_test_mode, relevance_threshold, user_comp
             html += get_section_header_html("📋 기타 포트폴리오")
 
             for company in other_companies:
-                html += _render_company_news(company, news_data[company], beta_test_mode, relevance_threshold)
+                html += render_company_news(company, news_data[company], beta_test_mode, relevance_threshold)
 
         # KT 관련 기사 섹션 (별도)
         if "KT" in news_data:
             html += get_section_header_html("📡 KT 관련 기사")
-            html += _render_company_news("KT", news_data["KT"], beta_test_mode, relevance_threshold)
+            html += render_company_news("KT", news_data["KT"], beta_test_mode, relevance_threshold)
     else:
         # user_companies 없으면 기존 방식대로 (KT만 분리)
         for company, news_detail in news_data.items():
             if company != "KT":
-                html += _render_company_news(company, news_detail, beta_test_mode, relevance_threshold)
+                html += render_company_news(company, news_detail, beta_test_mode, relevance_threshold)
 
         # KT는 마지막에
         if "KT" in news_data:
             html += get_section_header_html("📡 KT 관련 기사")
-            html += _render_company_news("KT", news_data["KT"], beta_test_mode, relevance_threshold)
+            html += render_company_news("KT", news_data["KT"], beta_test_mode, relevance_threshold)
 
     return html
 
@@ -486,11 +430,8 @@ def get_footer_html():
 
 def format_email_content(news_data, user_name, user_companies=None):
     """이메일 콘텐츠 포맷팅"""
-    from utils.data_loader import load_filter_config
-
-    filter_cfg = load_filter_config()
-    beta_test_mode = filter_cfg["beta_test_mode"]
-    relevance_threshold = filter_cfg["relevance_threshold"]
+    beta_test_mode = True
+    relevance_threshold = 6
 
     html = f"""<!DOCTYPE html>
 <html lang="ko">
@@ -518,3 +459,69 @@ def format_email_content(news_data, user_name, user_companies=None):
 </html>"""
 
     return html
+
+
+# 테스트용 더미 데이터
+dummy_news_data = {
+    "힐링페이퍼": {
+        "news_list": [
+            ("힐링페이퍼, AI 기반 디지털 플래너 서비스 출시", "힐링페이퍼가 인공지능 기술을 활용한 스마트 플래너를 선보였다.", "https://example.com/news1", 8),
+            ("힐링페이퍼 매출 전년 대비 150% 증가", "힐링페이퍼의 올해 매출이 급증하며 성장세를 이어가고 있다.", "https://example.com/news2", 7),
+        ],
+        "keyword": ["힐링페이퍼"],
+        "pre_filter_count": 15,
+        "cluster_sizes": {}
+    },
+    "클래스101": {
+        "news_list": [
+            ("클래스101, 해외 시장 진출 본격화", "클래스101이 동남아시아 시장 공략에 나섰다.", "https://example.com/news3"),
+            ("클래스101 창작자 생태계 확대", "클래스101의 크리에이터 수가 10만명을 돌파했다.", "https://example.com/news4"),
+        ],
+        "keyword": ["클래스101"],
+        "pre_filter_count": 12,
+        "cluster_sizes": {}
+    },
+    "뉴로메카": {
+        "news_list": [
+            ("뉴로메카, 협동로봇 신제품 공개", "뉴로메카가 차세대 협동로봇을 CES 2026에서 공개했다.", "https://example.com/news5", 9),
+        ],
+        "keyword": ["뉴로메카"],
+        "pre_filter_count": 8,
+        "cluster_sizes": {}
+    },
+    "KT": {
+        "news_list": [
+            ("KT, 6G 기술 개발 가속화", "KT가 6G 이동통신 기술 개발에 박차를 가하고 있다.", "https://example.com/news6"),
+            ("KT, AI 데이터센터 구축 완료", "KT가 경기도에 대규모 AI 데이터센터를 준공했다.", "https://example.com/news7", 8),
+            ("KT클라우드, 클라우드 서비스 확대", "KT클라우드가 기업용 클라우드 솔루션을 강화한다.", "https://example.com/news8", 7),
+        ],
+        "keyword": ["KT / 케이티"],
+        "pre_filter_count": 25,
+        "cluster_sizes": {}
+    }
+}
+
+# 담당 회사 설정 (힐링페이퍼만 담당)
+user_companies = ["힐링페이퍼"]
+
+# HTML 생성
+html_content = format_email_content(dummy_news_data, "테스트 사용자", user_companies)
+
+# 파일로 저장
+output_file = "preview_email.html"
+with open(output_file, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print("=" * 70)
+print("✅ HTML 파일 생성 완료!")
+print("=" * 70)
+print(f"\n📂 파일 경로: {output_file}")
+print(f"\n🌐 브라우저에서 열기:")
+print(f"   open {output_file}\n")
+print("📋 확인 사항:")
+print("  1. ✨ '참고' 박스의 margin이 제거되었는지 확인")
+print("  2. 📌 담당 포트폴리오: 힐링페이퍼")
+print("  3. 📋 기타 포트폴리오: 클래스101, 뉴로메카")
+print("  4. 📡 KT 관련 기사: KT (맨 하단에 별도 섹션)")
+print("  5. 🏷️  관련성 배지: 힐링페이퍼(8/10, 7/10), 뉴로메카(9/10), KT(8/10, 7/10)")
+print("=" * 70)
