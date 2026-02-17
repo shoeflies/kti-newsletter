@@ -16,7 +16,8 @@ genai.configure(api_key=gemini_api_key)
 # Embedding model (Gemini). Do not use text-embedding-004 (deprecated, returns 404).
 EMBEDDING_MODEL = "gemini-embedding-001"
 # Text generation model for relevance scoring (gemini-1.5-flash deprecated)
-GENERATION_MODEL_NAME = "gemini-2.5-flash"
+# NOTE: gemini-3-flash-preview is currently in preview. Monitor for stability.
+GENERATION_MODEL_NAME = "gemini-3-flash-preview"
 
 
 def _is_rate_limit_error(e):

@@ -57,54 +57,416 @@ def send_email(content, recipients):
         raise
 
 
+def get_email_styles():
+    """이메일 CSS 스타일"""
+    return """
+        /* 기본 리셋 */
+        body, table, td, p, a, li, blockquote {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0;
+            padding: 0;
+            background-color: #F7F7F7;
+        }
+
+        /* 폰트 */
+        * {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+        }
+
+        /* 래퍼 */
+        .email-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #FFFFFF;
+        }
+
+        /* 헤더 */
+        .email-header {
+            background-color: #090B43;
+            color: #FFFFFF;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .email-header h1 {
+            font-size: 30px;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .email-header p {
+            font-size: 12px;
+            font-weight: 400;
+            margin: 4px 0 0 0;
+            opacity: 0.9;
+        }
+
+        /* 공지 박스 */
+        .notice-box {
+            background-color: #F7F7F7;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 13px;
+            margin: 16px;
+        }
+
+        .notice-box strong {
+            color: #090B43;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .notice-box p {
+            color: #1E1E1E;
+            font-size: 14px;
+            line-height: 1.3;
+            margin: 5px 0 0 0;
+        }
+
+        .notice-highlight {
+            color: #D93931;
+            font-weight: 600;
+        }
+
+        .notice-link {
+            color: #D93931;
+            text-decoration: none;
+        }
+
+        .notice-link:hover {
+            text-decoration: underline;
+        }
+
+        /* 회사 섹션 */
+        .company-section {
+            background-color: #F7F7F7;
+            margin: 10px 0;
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        .company-header {
+            color: #090B43;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+        }
+
+        .company-keywords {
+            color: #6B7280;
+            font-size: 14px;
+            margin: 0 0 10px 0;
+        }
+
+        .company-keywords strong {
+            color: #1E1E1E;
+            font-weight: 500;
+        }
+
+        /* 뉴스 카드 */
+        .news-card {
+            background-color: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 13px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            text-decoration: none;
+            display: block;
+            color: inherit;
+            transition: all 0.2s;
+        }
+
+        .news-card:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-color: #D93931;
+        }
+
+        .news-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .news-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .relevance-badge {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+
+        .relevance-high {
+            background-color: #6B7280;
+            color: #FFFFFF;
+        }
+
+        .relevance-low {
+            background-color: #D1D5DB;
+            color: #4B5563;
+        }
+
+        .news-title {
+            color: #1E1E1E;
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        .news-description {
+            color: #6B7280;
+            font-size: 15px;
+            line-height: 1.3;
+            margin: 8px 0;
+        }
+
+
+        /* 푸터 */
+        .email-footer {
+            background-color: #F7F7F7;
+            color: #9CA3AF;
+            padding: 16px;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.3;
+        }
+
+        .email-footer p {
+            margin: 3px 0;
+        }
+
+        /* 모바일 최적화 */
+        @media only screen and (max-width: 1200px) {
+            .email-wrapper {
+                width: 100% !important;
+            }
+
+            .email-header,
+            .notice-box,
+            .company-section,
+            .email-footer {
+                padding: 13px !important;
+            }
+
+            .news-card {
+                padding: 10px !important;
+            }
+
+            .email-header h1 {
+                font-size: 20px !important;
+            }
+
+            .company-header {
+                font-size: 18px !important;
+            }
+        }
+
+        /* 다크모드 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1E1E1E !important;
+            }
+
+            .email-wrapper {
+                background-color: #2D2D2D !important;
+            }
+
+            .notice-box {
+                background-color: #3A3A3A !important;
+                border-color: #4A4A4A !important;
+            }
+
+            .notice-box p {
+                color: #E5E7EB !important;
+            }
+
+            .company-section {
+                background-color: #3A3A3A !important;
+            }
+
+            .news-card {
+                background-color: #2D2D2D !important;
+                border-color: #4A4A4A !important;
+            }
+
+            .news-title {
+                color: #FFFFFF !important;
+            }
+
+            .news-description {
+                color: #9CA3AF !important;
+            }
+
+            .company-keywords {
+                color: #9CA3AF !important;
+            }
+
+            .company-keywords strong {
+                color: #E5E7EB !important;
+            }
+        }
+    """
+
+
+def get_header_html(user_name):
+    """이메일 헤더"""
+    return f"""
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td class="email-header">
+                    <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png?format=1500w"
+                         alt="KTI Logo"
+                         style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
+                    <h1>KTI Portfolio Daily News</h1>
+                    <p>안녕하세요 {user_name}님, KTI 투자포트폴리오사의 뉴스리스트입니다</p>
+                </td>
+            </tr>
+        </table>
+    """
+
+
+def get_update_notice_html():
+    """업데이트 공지 박스"""
+    return """
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td style="padding: 0 16px;">
+                    <div class="notice-box">
+                        <p><strong>📢 업데이트 소식</strong></p>
+                        <p>
+                            • 수신자별로 담당 포트폴리오사의 뉴스가 상단에 배치됩니다.<br>
+                            • 각 회사별 검색 키워드도 함께 제공됩니다.<br>
+                            • <span class="notice-highlight">🆕 AI 필터로 관련 없는 뉴스를 필터링하는 기능을 테스트 중입니다!</span><br>
+                            • 키워드 추가/변경/삭제를 원하실 경우 언제든 말씀해주세요!<br>
+                            • 회사별 키워드는 <a href="https://drive.google.com/drive/u/0/folders/1Y_SD1yqjnijE6pY52c1xRp2yxBePHuzq" class="notice-link">KTI 공용드라이브의 구글시트</a>에서 관리 중입니다.
+                        </p>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    """
+
+
+def get_news_card_html(news_item, beta_test_mode, relevance_threshold):
+    """개별 뉴스 카드"""
+    if len(news_item) == 4:
+        title, description, url, score = news_item
+
+        if score < relevance_threshold:
+            badge = f'<span class="relevance-badge relevance-low">관련성 낮음 ({score}/10)</span>'
+        else:
+            badge = f'<span class="relevance-badge relevance-high">관련성 {score}/10</span>'
+
+        return f"""
+            <a href="{url}" target="_blank" class="news-card">
+                <div class="news-header">
+                    {badge}
+                </div>
+                <h3 class="news-title">{title}</h3>
+                <p class="news-description">{description}</p>
+            </a>
+        """
+    else:
+        title, description, url = news_item
+        return f"""
+            <a href="{url}" target="_blank" class="news-card">
+                <h3 class="news-title">{title}</h3>
+                <p class="news-description">{description}</p>
+            </a>
+        """
+
+
+def get_companies_html(news_data, beta_test_mode, relevance_threshold):
+    """회사 섹션"""
+    html = ""
+
+    for company, news_detail in news_data.items():
+        keywords = " / ".join(news_detail["keyword"])
+
+        html += f"""
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td style="padding: 0 16px;">
+                        <div class="company-section">
+                            <h2 class="company-header">{company}</h2>
+                            <p class="company-keywords"><strong>검색 키워드:</strong> {keywords}</p>
+        """
+
+        for news in news_detail["news_list"]:
+            html += get_news_card_html(news, beta_test_mode, relevance_threshold)
+
+        html += """
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        """
+
+    return html
+
+
+def get_footer_html():
+    """이메일 푸터"""
+    return """
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td class="email-footer">
+                    <p>본 메일은 자동으로 발송되었습니다.</p>
+                    <p>문의사항은 담당자에게 연락해주세요.</p>
+                    <p style="margin-top: 8px;">© 2024 KTI. All rights reserved.</p>
+                </td>
+            </tr>
+        </table>
+    """
+
+
 def format_email_content(news_data, user_name):
-    # 베타 테스트 모드 및 임계값: filter_config.json
+    """이메일 콘텐츠 포맷팅"""
     from utils.data_loader import load_filter_config
 
     filter_cfg = load_filter_config()
     beta_test_mode = filter_cfg["beta_test_mode"]
     relevance_threshold = filter_cfg["relevance_threshold"]
 
-    email_body = "<h1> [Gemini Test 발송] KTI Portfolio Daily News </h1>"
-    email_body += f"<p> 안녕하세요 {user_name}님. KTI 투자포트폴리오사의 뉴스리스트 메일링입니다</p><br><br>"
+    html = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+    <style>{get_email_styles()}</style>
+</head>
+<body>
+    <table role="presentation" class="email-wrapper" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            <td>
+                {get_header_html(user_name)}
+                {get_update_notice_html()}
+                {get_companies_html(news_data, beta_test_mode, relevance_threshold)}
+                {get_footer_html()}
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
 
-    email_body += """
-    <div style="font-family: Arial, sans-serif; font-size: 14px; color: #555;">
-        <p style="background-color: #f4f4f4; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
-            <strong>업데이트 소식:</strong><br>
-            수신자별로 담당 포트폴리오사의 뉴스가 상단에 배치됩니다. <br>
-            각 회사별 검색 키워드도 함께 제공됩니다. <br>
-            <span style="color: #0066cc; font-weight: bold;">🆕 AI 필터로 관련 없는 뉴스를 필터링하는 기능을 테스트 중입니다!</span><br>
-            ** 키워드 추가/변경/삭제를 원하실 경우 언제든 말씀해주세요!<br>
-            ** 회사별 키워드는 <a href="https://drive.google.com/drive/u/0/folders/1Y_SD1yqjnijE6pY52c1xRp2yxBePHuzq" style="color: #1a73e8; text-decoration: none;">KTI 공용드라이브의 구글시트</a>에서 관리 중입니다. 변경하실 경우 담당자에게 변경사실을 알려주세요
-        </p>
-    </div>
-    <br>
-    """
-
-    for company, news_detail in news_data.items():
-        keywords = " / ".join(news_detail["keyword"])
-        email_body += f"<h2 style='background-color: #FFD700;'>{company}</h2>"
-        email_body += f"<p><strong>검색 키워드:</strong> {keywords}</p>"
-        email_body += "<hr>"  # 회사 구분선
-
-        for news in news_detail["news_list"]:
-            if len(news) == 4:
-                title, description, url, score = news
-                if score < relevance_threshold:
-                    title_with_tag = f'<span style="background-color: #ffcccc; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: bold;">[관련성 낮음 - 필터링 예정 (점수: {score}/10)]</span> {title}'
-                    email_body += f"<h3>{title_with_tag}</h3>"
-                else:
-                    title_with_score = f'<span style="background-color: #d4edda; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: bold;">[관련성: {score}/10]</span> {title}'
-                    email_body += f"<h3>{title_with_score}</h3>"
-            else:
-                title, description, url = news
-                email_body += f"<h3>{title}</h3>"
-
-            email_body += f"<p>{description}</p>"
-            email_body += f'<a href="{url}">Link</a><br>'
-            email_body += "<hr>"
-
-        email_body += "<br>"
-
-    return email_body
+    return html
