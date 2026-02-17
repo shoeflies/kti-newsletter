@@ -32,8 +32,8 @@ if missing_vars:
 
 # 테스트 제한
 TEST_COMPANIES = ["뉴로메카", "리벨리온"]
-TEST_EMAIL = os.environ.get("TEST_EMAIL", "sw.joo@kti.vc")
-TEST_USER_NAME = os.environ.get("TEST_USER_NAME", "주상원")
+TEST_EMAIL = os.environ.get("TEST_EMAIL")
+TEST_USER_NAME = os.environ.get("TEST_USER_NAME", "테스트")
 
 # 테스트용 회사만 사용
 _all_company_info = load_company_info_from_csv()

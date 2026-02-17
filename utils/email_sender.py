@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def send_email(content, recipients):
+def send_email(content, recipients, subject=None):
     # SMTP 서버 설정
     smtp_server = os.environ.get("SMTP_SERVER")
     smtp_port = int(os.environ.get("SMTP_PORT", 587))
@@ -32,7 +32,9 @@ def send_email(content, recipients):
 
         # 메시지 생성
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "KTI Portfolio Daily News"
+        if subject is None:
+            subject = "KTI Portfolio Daily News"
+        msg["Subject"] = subject
         msg["From"] = email_login
         msg["To"] = recipients_str
 
@@ -129,7 +131,7 @@ def get_email_styles():
         .notice-box p {
             color: #1E1E1E;
             font-size: 14px;
-            line-height: 1.3;
+            line-height: 1.4;
             margin: 5px 0 0 0;
         }
 
@@ -232,8 +234,8 @@ def get_email_styles():
         .news-description {
             color: #6B7280;
             font-size: 15px;
-            line-height: 1.3;
-            margin: 8px 0;
+            line-height: 1.4;
+            margin: 8px 0 0 0;
         }
 
 
@@ -333,8 +335,8 @@ def get_header_html(user_name):
                     <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png?format=1500w"
                          alt="KTI Logo"
                          style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
-                    <h1>KTI Portfolio Daily News</h1>
-                    <p>안녕하세요 {user_name}님, KTI 투자포트폴리오사의 뉴스리스트입니다</p>
+                    <h1>Portfolio Daily News</h1>
+                    <p>Hello there, mighty fine morning!</p>
                 </td>
             </tr>
         </table>
@@ -348,12 +350,9 @@ def get_update_notice_html():
             <tr>
                 <td style="padding: 0 16px;">
                     <div class="notice-box">
-                        <p><strong>📢 업데이트 소식</strong></p>
+                        <p><strong>📢 참고</strong></p>
                         <p>
-                            • 수신자별로 담당 포트폴리오사의 뉴스가 상단에 배치됩니다.<br>
-                            • 각 회사별 검색 키워드도 함께 제공됩니다.<br>
-                            • <span class="notice-highlight">🆕 AI 필터로 관련 없는 뉴스를 필터링하는 기능을 테스트 중입니다!</span><br>
-                            • 키워드 추가/변경/삭제를 원하실 경우 언제든 말씀해주세요!<br>
+                            • 키워드 추가/변경/삭제를 원하실 경우 담당자(최우석)에게 문의 부탁드립니다.<br>
                             • 회사별 키워드는 <a href="https://drive.google.com/drive/u/0/folders/1Y_SD1yqjnijE6pY52c1xRp2yxBePHuzq" class="notice-link">KTI 공용드라이브의 구글시트</a>에서 관리 중입니다.
                         </p>
                     </div>
@@ -392,31 +391,70 @@ def get_news_card_html(news_item, beta_test_mode, relevance_threshold):
         """
 
 
-def get_companies_html(news_data, beta_test_mode, relevance_threshold):
-    """회사 섹션"""
+def get_section_header_html(title):
+    """섹션 헤더"""
+    return f"""
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td style="padding: 20px 16px 10px 16px;">
+                    <h2 style="color: #090B43; font-size: 22px; font-weight: 700; margin: 0; border-bottom: 2px solid #D93931; padding-bottom: 8px;">
+                        {title}
+                    </h2>
+                </td>
+            </tr>
+        </table>
+    """
+
+
+def _render_company_news(company, news_detail, beta_test_mode, relevance_threshold):
+    """개별 회사의 뉴스 렌더링 (헬퍼 함수)"""
+    keywords = " / ".join(news_detail["keyword"])
+
+    html = f"""
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td style="padding: 0 16px;">
+                    <div class="company-section">
+                        <h2 class="company-header">{company}</h2>
+                        <p class="company-keywords"><strong>검색 키워드:</strong> {keywords}</p>
+    """
+
+    for news in news_detail["news_list"]:
+        html += get_news_card_html(news, beta_test_mode, relevance_threshold)
+
+    html += """
+                    </div>
+                </td>
+            </tr>
+        </table>
+    """
+
+    return html
+
+
+def get_companies_html(news_data, beta_test_mode, relevance_threshold, user_companies=None):
+    """회사 섹션 (담당/비담당 구분)"""
     html = ""
 
-    for company, news_detail in news_data.items():
-        keywords = " / ".join(news_detail["keyword"])
+    # 담당 포트폴리오 섹션
+    if user_companies:
+        html += get_section_header_html("📌 담당 포트폴리오")
 
-        html += f"""
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                    <td style="padding: 0 16px;">
-                        <div class="company-section">
-                            <h2 class="company-header">{company}</h2>
-                            <p class="company-keywords"><strong>검색 키워드:</strong> {keywords}</p>
-        """
+        for company in user_companies:
+            if company in news_data:
+                html += _render_company_news(company, news_data[company], beta_test_mode, relevance_threshold)
 
-        for news in news_detail["news_list"]:
-            html += get_news_card_html(news, beta_test_mode, relevance_threshold)
+        # 기타 포트폴리오 섹션
+        other_companies = [c for c in news_data.keys() if c not in user_companies]
+        if other_companies:
+            html += get_section_header_html("📋 기타 포트폴리오")
 
-        html += """
-                        </div>
-                    </td>
-                </tr>
-            </table>
-        """
+            for company in other_companies:
+                html += _render_company_news(company, news_data[company], beta_test_mode, relevance_threshold)
+    else:
+        # user_companies 없으면 기존 방식대로
+        for company, news_detail in news_data.items():
+            html += _render_company_news(company, news_detail, beta_test_mode, relevance_threshold)
 
     return html
 
@@ -428,15 +466,14 @@ def get_footer_html():
             <tr>
                 <td class="email-footer">
                     <p>본 메일은 자동으로 발송되었습니다.</p>
-                    <p>문의사항은 담당자에게 연락해주세요.</p>
-                    <p style="margin-top: 8px;">© 2024 KTI. All rights reserved.</p>
+                    <p style="margin-top: 8px;">© 2026 KT Investment Co., Ltd. All rights reserved.</p>
                 </td>
             </tr>
         </table>
     """
 
 
-def format_email_content(news_data, user_name):
+def format_email_content(news_data, user_name, user_companies=None):
     """이메일 콘텐츠 포맷팅"""
     from utils.data_loader import load_filter_config
 
@@ -461,7 +498,7 @@ def format_email_content(news_data, user_name):
             <td>
                 {get_header_html(user_name)}
                 {get_update_notice_html()}
-                {get_companies_html(news_data, beta_test_mode, relevance_threshold)}
+                {get_companies_html(news_data, beta_test_mode, relevance_threshold, user_companies)}
                 {get_footer_html()}
             </td>
         </tr>

@@ -49,7 +49,7 @@ def cosine_similarity(vec1, vec2):
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
 
 
-def filter_similar_titles(titles, threshold=0.60):
+def filter_similar_titles(titles, threshold=0.60, return_cluster_info=False):
     embeddings = []
     for title in titles:
         try:
@@ -61,18 +61,30 @@ def filter_similar_titles(titles, threshold=0.60):
             continue
 
     if not embeddings:
-        return []
+        return [] if not return_cluster_info else {}
 
-    unique_titles = []
+    # 각 유니크 제목과 그것이 대표하는 클러스터 크기 추적
+    unique_titles = []  # [(title, embedding, idx, cluster_size), ...]
+
     for i, embedding in enumerate(embeddings):
         is_unique = True
-        for unique_embedding in unique_titles:
-            if cosine_similarity(embedding, unique_embedding[1]) > threshold:
+        for j, unique_item in enumerate(unique_titles):
+            if cosine_similarity(embedding, unique_item[1]) > threshold:
+                # 유사한 제목 발견 → 기존 클러스터에 추가
                 is_unique = False
+                # 클러스터 크기 증가
+                unique_titles[j] = (unique_item[0], unique_item[1], unique_item[2], unique_item[3] + 1)
                 break
         if is_unique:
-            unique_titles.append((titles[i], embedding, i))
-    return [idx for _, _, idx in unique_titles]
+            # 새로운 클러스터 시작 (초기 크기 1)
+            unique_titles.append((titles[i], embedding, i, 1))
+
+    if return_cluster_info:
+        # {인덱스: 클러스터 크기} 형태로 반환
+        return {idx: cluster_size for _, _, idx, cluster_size in unique_titles}
+    else:
+        # 기존 방식: 인덱스 리스트만 반환
+        return [idx for _, _, idx, _ in unique_titles]
 
 
 def check_news_relevance(news_title, news_description, business_content):
