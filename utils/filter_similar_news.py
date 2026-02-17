@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
 import numpy as np
 import time
 import os
@@ -7,17 +7,18 @@ import os
 # Load environment variables
 load_dotenv()
 
-# Configure Gemini API
+# Configure Gemini API with new SDK
 gemini_api_key = os.environ.get("GEMINI_API_KEY")
 if not gemini_api_key:
     raise EnvironmentError("GEMINI_API_KEY environment variable is not set")
-genai.configure(api_key=gemini_api_key)
 
-# Embedding model (Gemini). Do not use text-embedding-004 (deprecated, returns 404).
+# Initialize client (new unified SDK)
+client = genai.Client(api_key=gemini_api_key)
+
+# Embedding model (Gemini)
 EMBEDDING_MODEL = "gemini-embedding-001"
-# Text generation model for relevance scoring (gemini-1.5-flash deprecated)
-# NOTE: gemini-3-flash-preview is currently in preview. Monitor for stability.
-GENERATION_MODEL_NAME = "gemini-3-flash-preview"
+# Text generation model for relevance scoring (updated to stable model)
+GENERATION_MODEL_NAME = "gemini-2.0-flash-exp"
 
 
 def _is_rate_limit_error(e):
@@ -32,8 +33,13 @@ def get_embedding(text, model=EMBEDDING_MODEL):
     wait_times = [2, 5, 15, 30]
     for attempt in range(max_retries):
         try:
-            result = genai.embed_content(model=model, content=text)
-            return result["embedding"]
+            # New API: client.models.embed_content with 'contents' parameter
+            result = client.models.embed_content(
+                model=model,
+                contents=text
+            )
+            # New SDK returns Pydantic object with embeddings attribute
+            return result.embeddings[0].values
         except Exception as e:
             if _is_rate_limit_error(e) and attempt < max_retries - 1:
                 print(f"Rate limit (embedding), retrying in {wait_times[attempt]}s...")
@@ -113,23 +119,18 @@ def check_news_relevance(news_title, news_description, business_content):
 
     for attempt in range(max_retries):
         try:
-            model = genai.GenerativeModel(
-                GENERATION_MODEL_NAME,
-                system_instruction=system_instruction,
+            # New API: client.models.generate_content with config parameter
+            response = client.models.generate_content(
+                model=GENERATION_MODEL_NAME,
+                contents=f"{system_instruction}\n\n{prompt}",
+                config={
+                    "max_output_tokens": 10,
+                    "temperature": 0.3,
+                }
             )
-            response = model.generate_content(
-                prompt,
-                generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=10,
-                    temperature=0.3,
-                ),
-            )
-            # response.text can raise if no valid Part (e.g. finish_reason=SAFETY/blocked)
-            answer = ""
-            if response.candidates:
-                c = response.candidates[0]
-                if c.content and c.content.parts:
-                    answer = (c.content.parts[0].text or "").strip()
+
+            # New SDK: response.text directly accessible
+            answer = response.text.strip() if response.text else ""
 
             try:
                 score = int(answer) if answer else 0
