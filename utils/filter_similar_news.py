@@ -177,7 +177,9 @@ def filter_news_by_relevance(news_data, company_info, threshold=6, beta_mode=Fal
     low_relevance_count = 0
 
     for company, news_list in news_data.items():
-        business_content = company_info.get(company, {}).get("comment", "")
+        # comment는 리스트이므로 첫 번째 요소 추출
+        comments = company_info.get(company, {}).get("comment", [])
+        business_content = comments[0] if comments else ""
 
         if not business_content:
             print(
