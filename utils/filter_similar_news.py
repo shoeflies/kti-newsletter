@@ -17,8 +17,8 @@ client = genai.Client(api_key=gemini_api_key)
 
 # Embedding model (Gemini)
 EMBEDDING_MODEL = "gemini-embedding-001"
-# Text generation model for relevance scoring (updated to stable model)
-GENERATION_MODEL_NAME = "gemini-2.0-flash-exp"
+# Text generation model for relevance scoring
+GENERATION_MODEL_NAME = "gemini-3-flash-preview"
 
 
 def _is_rate_limit_error(e):
