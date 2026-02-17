@@ -12,6 +12,7 @@ from utils.filter_similar_news import filter_similar_titles
 from utils.fetch_news import make_target_url, fetch_news
 import os
 import asyncio
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -31,7 +32,7 @@ if missing_vars:
     )
 
 # 테스트 제한
-TEST_COMPANIES = ["뉴로메카", "리벨리온"]
+TEST_COMPANIES = ["힐링페이퍼", "클래스101", "뉴로메카", "리벨리온", "Bear Robotics, Inc.", "한국신용데이터"]
 TEST_EMAIL = os.environ.get("TEST_EMAIL")
 TEST_USER_NAME = os.environ.get("TEST_USER_NAME", "테스트")
 
@@ -39,6 +40,13 @@ TEST_USER_NAME = os.environ.get("TEST_USER_NAME", "테스트")
 _all_company_info = load_company_info_from_csv()
 company_info = {
     k: _all_company_info[k] for k in TEST_COMPANIES if k in _all_company_info
+}
+
+# KT 수동 추가 (CSV에 없는 회사)
+company_info["KT"] = {
+    "comment": ["국내 최대 통신사이자 디지털 플랫폼 기업으로 ICT, 금융사업, 위성방송서비스사업, 기타사업 등을 영위"],
+    "keyword": ["KT / 케이티"],
+    "manager": []  # 담당자 없음
 }
 
 # 테스트용 user_info: 한 명만, TEST_EMAIL로
@@ -66,8 +74,68 @@ def reorder_news_dict(news_dict, user_companies):
     return reordered_dict
 
 
+def generate_email_subject(news_data, user_companies):
+    """
+    이메일 제목 생성: KTI Portfolio Daily News(MM/DD: {뉴스 요약})
+
+    Args:
+        news_data: 회사별 뉴스 데이터 (pre_filter_count, cluster_sizes 포함)
+        user_companies: 담당 회사 리스트 (미사용)
+
+    Returns:
+        "KTI Portfolio Daily News(01/15: AI 스타트업 투자 급증)"
+    """
+    # 현재 날짜 (MM/DD)
+    today = datetime.now()
+    date_str = today.strftime("%m/%d")
+
+    # 대표 뉴스 선택: 필터링 전 기사 개수가 가장 많은 회사 (가장 핫한 토픽)
+    representative_news = None
+    max_pre_filter_count = 0
+    max_company = None
+
+    # 필터링 전 기사 개수가 가장 많은 회사 찾기
+    for company, data in news_data.items():
+        pre_filter_count = data.get("pre_filter_count", 0)
+        if pre_filter_count > max_pre_filter_count:
+            max_pre_filter_count = pre_filter_count
+            max_company = company
+
+    # 해당 회사의 뉴스 중 가장 큰 클러스터를 대표하는 뉴스 선택
+    if max_company and news_data[max_company]["news_list"]:
+        news_list = news_data[max_company]["news_list"]
+        cluster_sizes = news_data[max_company].get("cluster_sizes", {})
+
+        if cluster_sizes:
+            # 각 뉴스의 클러스터 크기를 확인하여 가장 큰 것 선택
+            max_cluster_size = 0
+            for news in news_list:
+                # news는 (title, description, url) 또는 (title, description, url, score)
+                news_title = news[0]
+                cluster_size = cluster_sizes.get(news_title, 1)
+                if cluster_size > max_cluster_size:
+                    max_cluster_size = cluster_size
+                    representative_news = news
+        else:
+            # 클러스터 정보가 없으면 첫 번째 뉴스 선택
+            representative_news = news_list[0]
+
+    # 뉴스 제목 요약 (20글자로 자르기)
+    if representative_news:
+        title = representative_news[0]
+        summary = title[:20] + ("..." if len(title) > 20 else "")
+    else:
+        summary = "업데이트"
+
+    return f"KTI Portfolio Daily News({date_str}: {summary})"
+
+
 async def main():
     news_count = 0
+    # 필터링 전 기사 개수 저장 (클러스터 크기 추정용)
+    pre_filter_counts = {}
+    # 각 뉴스의 클러스터 크기 저장
+    cluster_sizes = {}
 
     # Step 1: 키워드로 뉴스 검색 + 임베딩 유사도 중복 제거 (첫 번째 로직)
     print("\n=== Step 1: Fetching news and removing duplicates (embedding) ===")
@@ -80,12 +148,19 @@ async def main():
             await asyncio.sleep(1.5)
             print(company, ":", keyword)
 
+        # 필터링 전 기사 개수 저장 (많을수록 핫토픽)
+        pre_filter_counts[company] = len(articles)
+
         titles = [i[0] for i in articles]
-        idx_list = filter_similar_titles(titles)
-        filtered_articles = [articles[i] for i in idx_list]
+        # 클러스터 정보 포함해서 반환 {인덱스: 클러스터_크기}
+        cluster_info = filter_similar_titles(titles, return_cluster_info=True)
+
+        filtered_articles = [articles[i] for i in cluster_info.keys()]
 
         if len(filtered_articles) != 0:
             news_dict[company] = filtered_articles
+            # 클러스터 크기 정보를 제목 기반으로 저장 (순서 변경에 안전)
+            cluster_sizes[company] = {articles[idx][0]: size for idx, size in cluster_info.items()}
             news_count += len(filtered_articles)
 
     if news_count == 0:
@@ -93,6 +168,8 @@ async def main():
         return
 
     print(f"\nTotal news after deduplication: {news_count}")
+    print(f"Pre-filter counts: {pre_filter_counts}")
+    print(f"Cluster info: {cluster_sizes}")
 
     # Step 2: 테스트에서는 관련성 필터(2.5-flash) 끔 → 첫 번째 로직만 사용
     print("\n=== Step 2: AI relevance filtering is DISABLED (test mode) ===")
@@ -115,13 +192,18 @@ async def main():
 
         result_dict = {}
         for company, news_list in reordered_news_dict.items():
-            result_dict[company] = {"news_list": [], "keyword": []}
+            result_dict[company] = {"news_list": [], "keyword": [], "pre_filter_count": 0, "cluster_sizes": {}}
             result_dict[company]["news_list"] = news_list
             result_dict[company]["keyword"] = company_info[company]["keyword"]
+            result_dict[company]["pre_filter_count"] = pre_filter_counts.get(company, 0)
+            result_dict[company]["cluster_sizes"] = cluster_sizes.get(company, {})
 
-        email_body = format_email_content(result_dict, user_name)
+        email_body = format_email_content(result_dict, user_name, user_companies)
+        email_subject = generate_email_subject(result_dict, user_companies)
+
+        print(f"\nEmail subject: {email_subject}")
         print(f"Sending test email to {user_email[0]}...")
-        send_email(email_body, user_email)
+        send_email(email_body, user_email, email_subject)
 
     print("\nTest completed. Email sent to:", TEST_EMAIL)
 
