@@ -183,12 +183,17 @@ async def main():
         relevance_threshold = filter_cfg["relevance_threshold"]
         print(f"Threshold: {relevance_threshold}, Beta mode: {beta_test_mode}")
 
-        news_dict = filter_news_by_relevance(
+        # AI 관련성 필터링 적용
+        filtered_news_dict = filter_news_by_relevance(
             news_dict,
             company_info,
             threshold=relevance_threshold,
             beta_mode=beta_test_mode
         )
+
+        # 필터링된 결과로 업데이트
+        news_dict.clear()
+        news_dict.update(filtered_news_dict)
     else:
         print("\n=== Step 2: AI relevance filtering is DISABLED ===")
 
