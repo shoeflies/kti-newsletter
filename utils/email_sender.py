@@ -167,7 +167,7 @@ def get_email_styles():
         }
 
         .company-header {
-            color: #090B43;
+            color: #111827;
             font-size: 20px;
             font-weight: 600;
             margin: 0 0 8px 0;
@@ -233,7 +233,7 @@ def get_email_styles():
         }
 
         .news-title {
-            color: #1E1E1E;
+            color: #111827;
             font-size: 16px;
             font-weight: 600;
             line-height: 1.2;
@@ -423,7 +423,7 @@ def get_section_header_html(title):
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
                 <td style="padding: 20px 16px 10px 16px;">
-                    <h2 style="color: #090B43; font-size: 22px; font-weight: 700; margin: 0; border-bottom: 2px solid #D93931; padding-bottom: 8px;">
+                    <h2 style="color: #111827; font-size: 22px; font-weight: 700; margin: 0; border-bottom: 2px solid #D93931; padding-bottom: 8px;">
                         {title}
                     </h2>
                 </td>
