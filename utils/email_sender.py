@@ -336,9 +336,13 @@ def get_header_html(user_name):
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
                 <td class="email-header" style="background-color: #090B43;" data-ogsc="#1C419A">
-                    <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png"
-                         alt="KTI Logo"
-                         style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
+                    <picture>
+                        <source srcset="https://static1.squarespace.com/static/62149eb06e1020220949de66/t/627b1cb596a7f82ef28ccf38/1652235445994/kti_logo.png"
+                                media="(prefers-color-scheme: dark)">
+                        <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png"
+                             alt="KTI Logo"
+                             style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
+                    </picture>
                     <h1>Portfolio Daily News</h1>
                     <p>Hello there, mighty fine morning!</p>
                 </td>
