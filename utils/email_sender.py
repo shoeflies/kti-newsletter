@@ -113,6 +113,15 @@ def get_email_styles():
             opacity: 0.9;
         }
 
+        /* 로고 다크모드 전환 */
+        .light-logo {
+            display: block !important;
+        }
+
+        .dark-logo {
+            display: none !important;
+        }
+
         /* 공지 박스 */
         .notice-box {
             background-color: #F7F7F7;
@@ -293,6 +302,14 @@ def get_email_styles():
                 background-color: #1C419A !important;
             }
 
+            .light-logo {
+                display: none !important;
+            }
+
+            .dark-logo {
+                display: block !important;
+            }
+
             .notice-box {
                 background-color: #3A3A3A !important;
                 border-color: #4A4A4A !important;
@@ -336,13 +353,14 @@ def get_header_html(user_name):
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
                 <td class="email-header" style="background-color: #090B43;" data-ogsc="#1C419A">
-                    <picture>
-                        <source srcset="https://static1.squarespace.com/static/62149eb06e1020220949de66/t/627b1cb596a7f82ef28ccf38/1652235445994/kti_logo.png"
-                                media="(prefers-color-scheme: dark)">
-                        <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png"
-                             alt="KTI Logo"
-                             style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
-                    </picture>
+                    <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png"
+                         alt="KTI Logo"
+                         class="light-logo"
+                         style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
+                    <img src="https://static1.squarespace.com/static/62149eb06e1020220949de66/t/627b1cb596a7f82ef28ccf38/1652235445994/kti_logo.png"
+                         alt="KTI Logo"
+                         class="dark-logo"
+                         style="width: 120px; height: auto; margin-bottom: 5px; display: none; margin-left: auto; margin-right: auto;">
                     <h1>Portfolio Daily News</h1>
                     <p>Hello there, mighty fine morning!</p>
                 </td>
