@@ -94,7 +94,8 @@ def get_email_styles():
         /* 헤더 */
         .email-header {
             background-color: #090B43;
-            color: #FFFFFF;
+            background-image: linear-gradient(#090B43, #090B43);
+            color: #fffffe;
             padding: 20px;
             text-align: center;
         }
@@ -104,6 +105,7 @@ def get_email_styles():
             font-weight: 700;
             margin: 0;
             line-height: 1.6;
+            color: #fffffe !important;
         }
 
         .email-header p {
@@ -111,6 +113,7 @@ def get_email_styles():
             font-weight: 400;
             margin: 4px 0 0 0;
             opacity: 0.9;
+            color: #fffffe !important;
         }
 
         /* 로고 다크모드 전환 */
@@ -348,11 +351,13 @@ def get_email_styles():
 
 
 def get_header_html(user_name):
-    """이메일 헤더"""
+    """이메일 헤더 - Gmail 강제 반전 방지 적용"""
     return f"""
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-                <td class="email-header" style="background-color: #090B43;" data-ogsc="#1C419A">
+                <td class="email-header"
+                    style="background-color: #090B43; background-image: linear-gradient(#090B43, #090B43); color: #fffffe;"
+                    data-ogsc="#1C419A">
                     <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png"
                          alt="KTI Logo"
                          class="light-logo"
@@ -361,8 +366,8 @@ def get_header_html(user_name):
                          alt="KTI Logo"
                          class="dark-logo"
                          style="width: 120px; height: auto; margin-bottom: 5px; margin-left: auto; margin-right: auto;">
-                    <h1>Portfolio Daily News</h1>
-                    <p>Hello there, mighty fine morning!</p>
+                    <h1 style="color: #fffffe; margin: 0; font-size: 30px; font-weight: 700; line-height: 1.6;">Portfolio Daily News</h1>
+                    <p style="color: #fffffe; margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">Hello there, mighty fine morning!</p>
                 </td>
             </tr>
         </table>
