@@ -105,7 +105,14 @@ def get_email_styles():
             font-weight: 700;
             margin: 0;
             line-height: 1.6;
+        }
+
+        .email-header h1 span {
             color: #fffffe !important;
+            background-color: rgba(9,11,67,0.001);
+            background-image: linear-gradient(rgba(9,11,67,0.001), rgba(9,11,67,0.001));
+            padding: 5px 10px;
+            display: inline-block;
         }
 
         .email-header p {
@@ -113,9 +120,31 @@ def get_email_styles():
             font-weight: 400;
             margin: 4px 0 0 0;
             opacity: 0.9;
-            color: #fffffe !important;
         }
 
+        .email-header p span {
+            color: #fffffe !important;
+            background-color: rgba(9,11,67,0.001);
+            background-image: linear-gradient(rgba(9,11,67,0.001), rgba(9,11,67,0.001));
+            padding: 3px 5px;
+            display: inline-block;
+        }
+
+        /* Gmail iOS 다크모드 강제 반전 방지 핵 */
+        u + .body .gmail-blend-screen {
+            background: #000;
+            mix-blend-mode: screen;
+            display: inline-block;
+            width: 100%;
+        }
+
+        u + .body .gmail-blend-difference {
+            background: #000;
+            mix-blend-mode: difference;
+            display: inline-block;
+            width: 100%;
+            color: #ffffff;
+        }
 
         /* 공지 박스 */
         .notice-box {
@@ -123,7 +152,7 @@ def get_email_styles():
             border: 1px solid #E5E7EB;
             border-radius: 8px;
             padding: 13px;
-            margin: 16px;
+            margin: 13px 0 0 0;
         }
 
         .notice-box strong {
@@ -335,22 +364,27 @@ def get_email_styles():
 
 
 def get_header_html(user_name):
-    """이메일 헤더 - Gmail 강제 반전 방지 적용"""
+    """이메일 헤더 - Gmail 강제 반전 방지 적용 (mix-blend-mode)"""
     return f"""
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="border-collapse: collapse; border-spacing: 0; background-color: #090B43; background-image: linear-gradient(#090B43, #090B43);">
             <tr>
                 <td class="email-header"
-                    style="background-color: #090B43; background-image: linear-gradient(#090B43, #090B43); color: #fffffe;"
+                    style="background-color: #090B43; background-image: linear-gradient(#090B43, #090B43); padding: 20px; text-align: center; vertical-align: bottom; line-height: 100%;"
                     data-ogsc="#1C419A">
                     <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png"
                          alt="KTI Logo"
                          style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
-                    <h1 style="margin: 0; font-size: 30px; font-weight: 700; line-height: 1.6;">
-                        <span style="color: #fffffe; background-color: rgba(255,255,254,0.01); background-image: linear-gradient(rgba(255,255,254,0.01), rgba(255,255,254,0.01)); padding: 2px 0;">Portfolio Daily News</span>
-                    </h1>
-                    <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">
-                        <span style="color: #fffffe; background-color: rgba(255,255,254,0.01); background-image: linear-gradient(rgba(255,255,254,0.01), rgba(255,255,254,0.01)); padding: 2px 0;">Hello there, mighty fine morning!</span>
-                    </p>
+                    <div class="gmail-blend-screen">
+                        <div class="gmail-blend-difference">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 700; line-height: 1.6; text-shadow: 0 1px 0 #090B43;">
+                                Portfolio Daily News
+                            </h1>
+                            <p style="color: #ffffff; margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">
+                                Hello there, mighty fine morning!
+                            </p>
+                        </div>
+                    </div>
                 </td>
             </tr>
         </table>
@@ -517,7 +551,7 @@ def format_email_content(news_data, user_name, user_companies=None):
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
     <style>{get_email_styles()}</style>
 </head>
-<body>
+<body class="body">
     <table role="presentation" class="email-wrapper" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
             <td>

@@ -113,6 +113,31 @@ python3 test.py
   - 힐링페이퍼, 클래스101, 뉴로메카, 리벨리온, Bear Robotics, 한국신용데이터
 - AI 관련성 필터 비활성화 (임베딩 중복 제거만 실행)
 
+### 빠른 이메일 테스트 (test_email_quick.py)
+
+**API 호출 없이 HTML 디자인만 빠르게 테스트**하는 스크립트입니다.
+
+```bash
+# .env 파일에 설정이 있으면 바로 실행
+python3 test_email_quick.py
+```
+
+**특징**:
+- ⚡ API 호출 없음 (Gemini, Playwright 등)
+- 🎯 더미 데이터로 HTML만 생성
+- 📧 SMTP로 즉시 발송
+- 🔄 수정 → 실행 → 확인 사이클이 빠름
+
+**사용 시나리오**:
+- 이메일 디자인(CSS, HTML) 수정 후 빠른 확인
+- 다크모드 대응 테스트
+- 레이아웃 변경 검증
+
+**필수 환경변수** (.env):
+- `TEST_EMAIL`: 수신 이메일 주소
+- `SMTP_SERVER`, `SMTP_PORT`: SMTP 서버 정보
+- `EMAIL_LOGIN`, `EMAIL_PASSWORD`: 인증 정보
+
 ### GitHub Actions
 
 - `.github/workflows/daily-news.yml` - 정식 자동 실행 (월-금 오전 8시 KST)
@@ -251,6 +276,96 @@ python3 test_email_preview.py
 
 1. `filter_config.json`의 `relevance_threshold` 낮추기
 2. 또는 `beta_test_mode: true`로 설정하여 낮은 점수 기사도 포함
+
+---
+
+## Gmail iOS 다크모드 대응
+
+### 문제점
+
+아이폰 Gmail 앱의 다크모드는 **강제 색상 반전(Forced Color Inversion)** 알고리즘을 사용합니다:
+- 어두운 배경색 → 밝은 색으로 반전
+- 밝은 텍스트(흰색) → 어두운 색으로 반전
+- CSS 미디어 쿼리(`@media (prefers-color-scheme: dark)`) 무시
+
+이로 인해 의도한 브랜드 컬러가 변하거나 텍스트가 읽을 수 없게 됩니다.
+
+### 적용된 해결책
+
+**1. 배경색 반전 방지 - linear-gradient 핵**
+```css
+background-color: #090B43;
+background-image: linear-gradient(#090B43, #090B43);
+```
+- Gmail은 그라디언트 배경을 "사용자 디자인"으로 인식하여 반전하지 않음
+- 적용 위치: `.email-header` (헤더 배경)
+
+**2. Gmail 전용 색상 지정 - data-ogsc**
+```html
+<td style="background-color: #090B43;" data-ogsc="#1C419A">
+```
+- `data-ogsc` = Original Gmail Skin Color
+- Gmail 다크모드에서 지정한 색상 사용 (자동 변환 방지)
+- 적용 위치: 헤더 `<td>` 태그
+
+**3. 텍스트 색상 반전 방지 - mix-blend-mode 핵**
+```html
+<div class="gmail-blend-screen">
+  <div class="gmail-blend-difference">
+    <h1 style="color: #ffffff; text-shadow: 0 1px 0 #090B43;">
+      Portfolio Daily News
+    </h1>
+  </div>
+</div>
+```
+
+CSS:
+```css
+u + .body .gmail-blend-screen {
+  background: #000;
+  mix-blend-mode: screen;
+}
+
+u + .body .gmail-blend-difference {
+  background: #000;
+  mix-blend-mode: difference;
+  color: #ffffff;
+}
+```
+
+- `mix-blend-mode: screen`과 `difference`를 겹쳐서 Gmail의 반전 필터를 **수학적으로 상쇄**
+- `u + .body` 선택자로 Gmail만 타겟팅
+- `text-shadow` 추가로 Gmail이 텍스트를 "디자인 요소"로 인식하도록 유도
+
+**4. 테이블 간격 제거**
+```html
+<table style="border-collapse: collapse; border-spacing: 0;
+              background-color: #090B43;">
+```
+- 헤더와 본문 사이의 흰색 선(gap) 제거
+- `vertical-align: bottom; line-height: 100%`로 셀 하단 공백 제거
+- 부모 테이블 배경색을 헤더와 동일하게 설정하여 틈이 보이지 않도록
+
+### 테스트 방법
+
+1. `test_email_quick.py`로 테스트 이메일 발송
+2. 아이폰 Gmail 앱에서 확인:
+   - **라이트모드**: 진한 남색 헤더 (`#090B43`), 흰색 텍스트
+   - **다크모드**: 파란색 헤더 (`#1C419A`), 흰색 텍스트 유지 (반전 안 됨)
+
+### 참고 자료
+
+이 방법들은 이메일 마케팅 업계에서 검증된 기법입니다:
+- linear-gradient 핵: 가장 널리 사용되는 배경 보호 방법
+- mix-blend-mode: 고급 기법으로 텍스트 반전 방지
+- data-ogsc: Gmail 공식 지원 속성 (비공식 문서)
+
+### 코드 위치
+
+- `utils/email_sender.py`:
+  - `get_email_styles()`: CSS 블렌드 모드 정의
+  - `get_header_html()`: 헤더 HTML (이중 래퍼, data-ogsc)
+  - `format_email_content()`: `<body class="body">` 추가
 
 ---
 
