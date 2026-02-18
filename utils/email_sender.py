@@ -356,11 +356,11 @@ def get_header_html(user_name):
                     <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png"
                          alt="KTI Logo"
                          class="light-logo"
-                         style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
+                         style="width: 120px; height: auto; margin-bottom: 5px; margin-left: auto; margin-right: auto;">
                     <img src="https://static1.squarespace.com/static/62149eb06e1020220949de66/t/627b1cb596a7f82ef28ccf38/1652235445994/kti_logo.png"
                          alt="KTI Logo"
                          class="dark-logo"
-                         style="width: 120px; height: auto; margin-bottom: 5px; display: none; margin-left: auto; margin-right: auto;">
+                         style="width: 120px; height: auto; margin-bottom: 5px; margin-left: auto; margin-right: auto;">
                     <h1>Portfolio Daily News</h1>
                     <p>Hello there, mighty fine morning!</p>
                 </td>
