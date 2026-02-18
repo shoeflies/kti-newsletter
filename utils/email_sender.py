@@ -380,7 +380,7 @@ def get_header_html(user_name):
                             <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 700; line-height: 1.6; text-shadow: 0 1px 0 #090B43;">
                                 Portfolio Daily News
                             </h1>
-                            <p style="color: #ffffff; margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">
+                            <p style="color: #ffffff; margin: 4px 0 0 0; font-size: 12px; opacity: 0.9; font-style: italic;">
                                 Hello there, mighty fine morning!
                             </p>
                         </div>
