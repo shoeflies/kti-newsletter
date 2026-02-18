@@ -193,7 +193,17 @@ async def main():
         print("\n=== Step 2: AI relevance filtering is DISABLED ===")
         print("Set enable_relevance_filter to true in filter_config.json to enable it")
 
+    # 테스트 복사본 발송 설정 확인
+    send_test_copy = filter_cfg.get("send_test_copy", False)
+    test_email = os.environ.get("TEST_EMAIL")
+
+    if send_test_copy and test_email:
+        print(f"\n⚠️  Test copy mode: All emails will also be sent to {test_email}")
+    elif send_test_copy and not test_email:
+        print("\n⚠️  Warning: send_test_copy is enabled but TEST_EMAIL is not set")
+
     # 유저별 뉴스 정렬 후 이메일 발송
+    print("\n=== Sending emails to users ===")
     for user_name, _ in user_info.items():
         # company_info에서 해당 manager가 담당하는 회사 목록 추출
         user_companies = [
@@ -202,13 +212,7 @@ async def main():
             if user_name in info.get("manager", [])
         ]
 
-        # 테스트 모드일 때는 환경변수의 이메일 주소 사용
-        test_email = os.environ.get("TEST_EMAIL")
-        user_email = (
-            [test_email]
-            if test_email
-            else user_info.get(user_name, {}).get("email", [])
-        )
+        user_email = user_info.get(user_name, {}).get("email", [])
 
         if user_companies:
             reordered_news_dict = reorder_news_dict(news_dict, user_companies)
@@ -226,11 +230,14 @@ async def main():
         email_body = format_email_content(result_dict, user_name, user_companies)
         email_subject = generate_email_subject(result_dict, user_companies)
 
-        # 테스트 모드일 때 로그 출력
-        if test_email:
-            print(f"Test mode: Sending email to {test_email}")
-
+        # 정식 발송
+        print(f"Sending to {user_name}: {user_email}")
         send_email(email_body, user_email, email_subject)
+
+        # 테스트 복사본 발송 (설정 활성화 시)
+        if send_test_copy and test_email:
+            print(f"  └─ Sending test copy to {test_email}")
+            send_email(email_body, [test_email], f"[TEST: {user_name}] {email_subject}")
 
 
 if __name__ == "__main__":

@@ -3,5 +3,6 @@
   "relevance_threshold": 6,
   "beta_test_mode": false,
   "enable_keyword_prefilter": true,
-  "enable_keyword_in_prompt": true
+  "enable_keyword_in_prompt": true,
+  "send_test_copy": false
 }
