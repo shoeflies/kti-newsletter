@@ -335,7 +335,7 @@ def get_header_html(user_name):
     return f"""
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
-                <td class="email-header">
+                <td class="email-header" style="background-color: #090B43;" data-ogsc="#1C419A">
                     <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png"
                          alt="KTI Logo"
                          style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
