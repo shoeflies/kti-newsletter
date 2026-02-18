@@ -116,14 +116,6 @@ def get_email_styles():
             color: #fffffe !important;
         }
 
-        /* 로고 다크모드 전환 */
-        .light-logo {
-            display: block !important;
-        }
-
-        .dark-logo {
-            display: none !important;
-        }
 
         /* 공지 박스 */
         .notice-box {
@@ -305,14 +297,6 @@ def get_email_styles():
                 background-color: #1C419A !important;
             }
 
-            .light-logo {
-                display: none !important;
-            }
-
-            .dark-logo {
-                display: block !important;
-            }
-
             .notice-box {
                 background-color: #3A3A3A !important;
                 border-color: #4A4A4A !important;
@@ -360,14 +344,13 @@ def get_header_html(user_name):
                     data-ogsc="#1C419A">
                     <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png"
                          alt="KTI Logo"
-                         class="light-logo"
-                         style="width: 120px; height: auto; margin-bottom: 5px; margin-left: auto; margin-right: auto;">
-                    <img src="https://static1.squarespace.com/static/62149eb06e1020220949de66/t/627b1cb596a7f82ef28ccf38/1652235445994/kti_logo.png"
-                         alt="KTI Logo"
-                         class="dark-logo"
-                         style="width: 120px; height: auto; margin-bottom: 5px; margin-left: auto; margin-right: auto;">
-                    <h1 style="color: #fffffe; margin: 0; font-size: 30px; font-weight: 700; line-height: 1.6;">Portfolio Daily News</h1>
-                    <p style="color: #fffffe; margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">Hello there, mighty fine morning!</p>
+                         style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
+                    <h1 style="margin: 0; font-size: 30px; font-weight: 700; line-height: 1.6;">
+                        <span style="color: #fffffe; background-color: rgba(255,255,254,0.01); background-image: linear-gradient(rgba(255,255,254,0.01), rgba(255,255,254,0.01)); padding: 2px 0;">Portfolio Daily News</span>
+                    </h1>
+                    <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">
+                        <span style="color: #fffffe; background-color: rgba(255,255,254,0.01); background-image: linear-gradient(rgba(255,255,254,0.01), rgba(255,255,254,0.01)); padding: 2px 0;">Hello there, mighty fine morning!</span>
+                    </p>
                 </td>
             </tr>
         </table>
