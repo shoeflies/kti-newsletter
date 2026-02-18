@@ -401,7 +401,7 @@ def get_update_notice_html():
                         <p style="margin: 0;"><strong>📢 참고</strong></p>
                         <p>
                             • 키워드 추가/변경/삭제를 원하실 경우 담당자(최우석)에게 문의 부탁드립니다.<br>
-                            • 회사별 키워드는 <a href="https://drive.google.com/drive/u/0/folders/1Y_SD1yqjnijE6pY52c1xRp2yxBePHuzq" class="notice-link">KTI 공용드라이브의 구글시트</a>에서 관리 중입니다.
+                            • 회사별 키워드는 <a href="https://docs.google.com/spreadsheets/d/18uuFiZu_yrk7CePiMf8oG3NXXZ8JM0lAnpqIW_vFSvQ/edit?gid=0#gid=0" class="notice-link" style="color: #D93931; text-decoration: none;">KTI 공용드라이브의 구글시트</a>에서 관리 중입니다.
                         </p>
                     </div>
                 </td>
