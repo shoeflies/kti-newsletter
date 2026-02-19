@@ -2,7 +2,7 @@ name: Daily News Bot
 
 on:
   schedule:
-    - cron: "0 23 * * 0-4" # UTC 23:00 (전날) = KST 08:00, 일-목요일 실행 (월-금요일 새벽에 실행됨)
+    - cron: "0 22 30 * 0-4" # UTC 22:30 (전날) = KST 07:30, 일-목요일 실행 (월-금요일 새벽에 실행됨)
   workflow_dispatch: # 수동 실행 옵션
 
 jobs:

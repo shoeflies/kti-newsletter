@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+    <style>
+        /* 기본 리셋 */
+        body, table, td, p, a, li, blockquote {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0;
+            padding: 0;
+            background-color: #F7F7F7;
+        }
+
+        /* 폰트 */
+        * {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+        }
+
+        /* 래퍼 */
+        .email-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #FFFFFF;
+        }
+
+        /* 헤더 */
+        .email-header {
+            background-color: #090B43;
+            color: #FFFFFF;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .email-header h1 {
+            font-size: 30px;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .email-header p {
+            font-size: 12px;
+            font-weight: 400;
+            margin: 4px 0 0 0;
+            opacity: 0.9;
+        }
+
+        /* 공지 박스 */
+        .notice-box {
+            background-color: #F7F7F7;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 13px;
+            margin: 16px;
+        }
+
+        .notice-box strong {
+            color: #090B43;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .notice-box p {
+            color: #1E1E1E;
+            font-size: 14px;
+            line-height: 1.3;
+            margin: 5px 0 0 0;
+        }
+
+        .notice-highlight {
+            color: #D93931;
+            font-weight: 600;
+        }
+
+        .notice-link {
+            color: #D93931;
+            text-decoration: none;
+        }
+
+        .notice-link:hover {
+            text-decoration: underline;
+        }
+
+        /* 회사 섹션 */
+        .company-section {
+            background-color: #F7F7F7;
+            margin: 10px 0;
+            padding: 16px;
+            border-radius: 8px;
+        }
+
+        .company-header {
+            color: #090B43;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+        }
+
+        .company-keywords {
+            color: #6B7280;
+            font-size: 14px;
+            margin: 0 0 10px 0;
+        }
+
+        .company-keywords strong {
+            color: #1E1E1E;
+            font-weight: 500;
+        }
+
+        /* 뉴스 카드 */
+        .news-card {
+            background-color: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 13px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            text-decoration: none;
+            display: block;
+            color: inherit;
+            transition: all 0.2s;
+        }
+
+        .news-card:hover {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-color: #D93931;
+        }
+
+        .news-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .news-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .relevance-badge {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+
+        .relevance-high {
+            background-color: #6B7280;
+            color: #FFFFFF;
+        }
+
+        .relevance-low {
+            background-color: #D1D5DB;
+            color: #4B5563;
+        }
+
+        .news-title {
+            color: #1E1E1E;
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        .news-description {
+            color: #6B7280;
+            font-size: 15px;
+            line-height: 1.3;
+            margin: 8px 0;
+        }
+
+
+        /* 푸터 */
+        .email-footer {
+            background-color: #F7F7F7;
+            color: #9CA3AF;
+            padding: 16px;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.3;
+        }
+
+        .email-footer p {
+            margin: 3px 0;
+        }
+
+        /* 모바일 최적화 */
+        @media only screen and (max-width: 1200px) {
+            .email-wrapper {
+                width: 100% !important;
+            }
+
+            .email-header,
+            .notice-box,
+            .company-section,
+            .email-footer {
+                padding: 13px !important;
+            }
+
+            .news-card {
+                padding: 10px !important;
+            }
+
+            .email-header h1 {
+                font-size: 20px !important;
+            }
+
+            .company-header {
+                font-size: 18px !important;
+            }
+        }
+
+        /* 다크모드 */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1E1E1E !important;
+            }
+
+            .email-wrapper {
+                background-color: #2D2D2D !important;
+            }
+
+            .notice-box {
+                background-color: #3A3A3A !important;
+                border-color: #4A4A4A !important;
+            }
+
+            .notice-box p {
+                color: #E5E7EB !important;
+            }
+
+            .company-section {
+                background-color: #3A3A3A !important;
+            }
+
+            .news-card {
+                background-color: #2D2D2D !important;
+                border-color: #4A4A4A !important;
+            }
+
+            .news-title {
+                color: #FFFFFF !important;
+            }
+
+            .news-description {
+                color: #9CA3AF !important;
+            }
+
+            .company-keywords {
+                color: #9CA3AF !important;
+            }
+
+            .company-keywords strong {
+                color: #E5E7EB !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <table role="presentation" class="email-wrapper" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            <td>
+                <!-- 헤더 -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td class="email-header">
+                            <img src="https://images.squarespace-cdn.com/content/v1/62149eb06e1020220949de66/58ee7847-c613-4b0e-896f-ee35190825aa/kti_logo.png?format=1500w"
+                                 alt="KTI Logo"
+                                 style="width: 120px; height: auto; margin-bottom: 5px; display: block; margin-left: auto; margin-right: auto;">
+                            <h1>KTI Portfolio Daily News</h1>
+                            <p>안녕하세요 테스터님, KTI 투자포트폴리오사의 뉴스리스트입니다</p>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- 공지 박스 -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="padding: 0 16px;">
+                            <div class="notice-box">
+                                <p><strong>📢 업데이트 소식</strong></p>
+                                <p>
+                                    • 수신자별로 담당 포트폴리오사의 뉴스가 상단에 배치됩니다.<br>
+                                    • 각 회사별 검색 키워드도 함께 제공됩니다.<br>
+                                    • <span class="notice-highlight">🆕 AI 필터로 관련 없는 뉴스를 필터링하는 기능을 테스트 중입니다!</span><br>
+                                    • 키워드 추가/변경/삭제를 원하실 경우 언제든 말씀해주세요!<br>
+                                    • 회사별 키워드는 <a href="https://drive.google.com/drive/u/0/folders/1Y_SD1yqjnijE6pY52c1xRp2yxBePHuzq" class="notice-link">KTI 공용드라이브의 구글시트</a>에서 관리 중입니다.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- 회사 1: AI 헬스케어 스타트업 -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="padding: 0 16px;">
+                            <div class="company-section">
+                                <h2 class="company-header">AI 헬스케어 스타트업</h2>
+                                <p class="company-keywords"><strong>검색 키워드:</strong> AI / 헬스케어 / 의료 / 진단</p>
+
+                                <!-- 뉴스 1: 높은 관련성 -->
+                                <a href="https://example.com/news1" target="_blank" class="news-card">
+                                    <div class="news-header">
+                                        <span class="relevance-badge relevance-high">관련성 9/10</span>
+                                    </div>
+                                    <h3 class="news-title">AI 기반 암 진단 솔루션, FDA 승인 획득</h3>
+                                    <p class="news-description">인공지능을 활용한 조기 암 진단 시스템이 미국 FDA의 최종 승인을 받았습니다. 이 시스템은 기존 진단 방식 대비 정확도가 25% 향상되었으며...</p>
+                                </a>
+
+                                <!-- 뉴스 2: 낮은 관련성 -->
+                                <a href="https://example.com/news2" target="_blank" class="news-card">
+                                    <div class="news-header">
+                                        <span class="relevance-badge relevance-low">관련성 낮음 (4/10)</span>
+                                    </div>
+                                    <h3 class="news-title">병원 경영 컨설팅 시장 성장 전망</h3>
+                                    <p class="news-description">국내 병원 경영 컨설팅 시장이 지속적으로 성장하고 있다. 의료 경영 효율화에 대한 수요가 증가하면서...</p>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- 회사 2: 핀테크 플랫폼 -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="padding: 0 16px;">
+                            <div class="company-section">
+                                <h2 class="company-header">핀테크 플랫폼</h2>
+                                <p class="company-keywords"><strong>검색 키워드:</strong> 핀테크 / 금융 / 결제 / 송금</p>
+
+                                <!-- 뉴스 1: 최고 관련성 -->
+                                <a href="https://example.com/news3" target="_blank" class="news-card">
+                                    <div class="news-header">
+                                        <span class="relevance-badge relevance-high">관련성 10/10</span>
+                                    </div>
+                                    <h3 class="news-title">모바일 간편결제 시장 점유율 1위 달성</h3>
+                                    <p class="news-description">올해 2분기 모바일 간편결제 시장에서 점유율 1위를 기록했습니다. 전년 동기 대비 거래액이 150% 증가하며...</p>
+                                </a>
+
+                                <!-- 뉴스 2: 높은 관련성 -->
+                                <a href="https://example.com/news4" target="_blank" class="news-card">
+                                    <div class="news-header">
+                                        <span class="relevance-badge relevance-high">관련성 8/10</span>
+                                    </div>
+                                    <h3 class="news-title">블록체인 기반 국제송금 서비스 출시</h3>
+                                    <p class="news-description">블록체인 기술을 활용한 새로운 국제송금 서비스가 정식 출시되었습니다. 기존 송금 방식 대비 수수료가 70% 절감되며...</p>
+                                </a>
+
+                                <!-- 뉴스 3: 중간 관련성 -->
+                                <a href="https://example.com/news5" target="_blank" class="news-card">
+                                    <div class="news-header">
+                                        <span class="relevance-badge relevance-low">관련성 낮음 (5/10)</span>
+                                    </div>
+                                    <h3 class="news-title">금융위원회, 새로운 규제안 발표</h3>
+                                    <p class="news-description">금융위원회가 핀테크 산업에 대한 새로운 규제안을 발표했습니다. 업계에서는 규제 완화를 요구하고 있으나...</p>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- 회사 3: 친환경 에너지 -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="padding: 0 16px;">
+                            <div class="company-section">
+                                <h2 class="company-header">친환경 에너지</h2>
+                                <p class="company-keywords"><strong>검색 키워드:</strong> 태양광 / 신재생에너지 / ESG / 탄소중립</p>
+
+                                <!-- 뉴스 1 -->
+                                <a href="https://example.com/news6" target="_blank" class="news-card">
+                                    <div class="news-header">
+                                        <span class="relevance-badge relevance-high">관련성 7/10</span>
+                                    </div>
+                                    <h3 class="news-title">대규모 태양광 발전단지 착공</h3>
+                                    <p class="news-description">전남 지역에 국내 최대 규모의 태양광 발전단지 건설이 시작되었습니다. 총 사업비 2천억 원 규모로...</p>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- 푸터 -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td class="email-footer">
+                            <p>본 메일은 자동으로 발송되었습니다.</p>
+                            <p>문의사항은 담당자에게 연락해주세요.</p>
+                            <p style="margin-top: 6px;">© 2024 KTI. All rights reserved.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
