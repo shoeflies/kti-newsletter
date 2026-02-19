@@ -6,13 +6,13 @@
 """
 
 from tqdm import tqdm
-from utils.data_loader import load_company_info_from_csv, load_filter_config
+from utils.data_loader import load_company_info_from_csv, load_filter_config, get_special_companies
 from utils.email_sender import format_email_content, send_email
 from utils.filter_similar_news import filter_similar_titles, filter_news_by_relevance
 from utils.fetch_news import make_target_url, fetch_news
 import os
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -42,12 +42,8 @@ company_info = {
     k: _all_company_info[k] for k in TEST_COMPANIES if k in _all_company_info
 }
 
-# KT 수동 추가 (CSV에 없는 회사)
-company_info["KT"] = {
-    "comment": ["국내 최대 통신사이자 디지털 플랫폼 기업으로 ICT, 금융사업, 위성방송서비스사업, 기타사업 등을 영위"],
-    "keyword": ["KT / 케이티"],
-    "manager": []  # 담당자 없음
-}
+# 특별 모니터링 회사 추가 (CSV 외 별도 관리)
+company_info.update(get_special_companies())
 
 # 테스트용 user_info: 한 명만, TEST_EMAIL로
 user_info = {TEST_USER_NAME: {"email": [TEST_EMAIL]}}
@@ -86,7 +82,8 @@ def generate_email_subject(news_data, user_companies):
         "KTI Portfolio Daily News(01/15: AI 스타트업 투자 급증)"
     """
     # 현재 날짜 (MM/DD)
-    today = datetime.now()
+    KST = timezone(timedelta(hours=9))
+    today = datetime.now(KST)
     date_str = today.strftime("%m/%d")
 
     # 대표 뉴스 선택: 필터링 전 기사 개수가 가장 많은 회사 (가장 핫한 토픽)
@@ -94,9 +91,10 @@ def generate_email_subject(news_data, user_companies):
     max_pre_filter_count = 0
     max_company = None
 
-    # 필터링 전 기사 개수가 가장 많은 회사 찾기 (KT 제외)
+    # 필터링 전 기사 개수가 가장 많은 회사 찾기 (특별 회사 제외)
+    SPECIAL_COMPANIES = set(get_special_companies().keys())
     for company, data in news_data.items():
-        if company == "KT":  # KT는 제목 생성 대상에서 제외
+        if company in SPECIAL_COMPANIES:
             continue
         pre_filter_count = data.get("pre_filter_count", 0)
         if pre_filter_count > max_pre_filter_count:
@@ -182,11 +180,9 @@ async def main():
         print("\n=== Step 2: AI-based relevance filtering ===")
         relevance_threshold = filter_cfg["relevance_threshold"]
         enable_keyword_prefilter = filter_cfg.get("enable_keyword_prefilter", True)
-        enable_keyword_in_prompt = filter_cfg.get("enable_keyword_in_prompt", True)
 
         print(f"Threshold: {relevance_threshold}, Beta mode: {beta_test_mode}")
         print(f"Keyword prefilter: {'ON' if enable_keyword_prefilter else 'OFF'}")
-        print(f"Keyword in prompt: {'ON' if enable_keyword_in_prompt else 'OFF'}")
 
         # AI 관련성 필터링 적용
         filtered_news_dict = filter_news_by_relevance(
@@ -195,7 +191,6 @@ async def main():
             threshold=relevance_threshold,
             beta_mode=beta_test_mode,
             enable_keyword_prefilter=enable_keyword_prefilter,
-            enable_keyword_in_prompt=enable_keyword_in_prompt
         )
 
         # 필터링된 결과로 업데이트

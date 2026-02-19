@@ -52,6 +52,25 @@ dummy_news_data = {
         "keyword": ["뉴로메카"],
         "pre_filter_count": 2,
         "cluster_sizes": {}
+    },
+    "KT": {
+        "news_list": [
+            ("KT, AI 기반 통신 서비스 확대", "KT가 AI 기술을 활용한 신규 통신 서비스를 발표했다", "https://example.com/7"),
+            ("케이티, 데이터센터 투자 확대", "KT가 대규모 데이터센터 투자 계획을 밝혔다", "https://example.com/8"),
+        ],
+        "keyword": ["KT / 케이티"],
+        "pre_filter_count": 4,
+        "cluster_sizes": {}
+    },
+    "LP 출자 동향": {
+        "news_list": [
+            ("모태펀드, 2026년 1분기 출자 계획 발표", "중소벤처기업부 모태펀드가 1분기 출자 사업 공고를 냈다", "https://example.com/9"),
+            ("성장금융, 스케일업 펀드 출자사 선정", "한국성장금융이 스케일업 펀드 운용사를 선정했다", "https://example.com/10"),
+            ("연기금, 벤처펀드 출자 확대 검토", "국민연금 등 주요 연기금이 벤처펀드 출자 비중 확대를 검토 중이다", "https://example.com/11"),
+        ],
+        "keyword": ["모태펀드 / 벤처 출자 / 성장금융 / LP 출자"],
+        "pre_filter_count": 6,
+        "cluster_sizes": {}
     }
 }
 

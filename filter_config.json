@@ -3,6 +3,6 @@
   "relevance_threshold": 6,
   "beta_test_mode": false,
   "enable_keyword_prefilter": true,
-  "enable_keyword_in_prompt": true,
-  "send_test_copy": false
+  "send_test_copy": false,
+  "relevance_criteria": "- 10점: 이 회사가 기사의 핵심 주인공이고, 회사의 핵심 사업과 직접 관련된 뉴스\n    - 7-9점: 이 회사가 기사의 주인공이며 다음 중 하나에 해당:\n        * 핵심 사업 분야와 밀접하게 관련된 내용\n        * IPO, 상장, 투자 유치, M&A, 인수합병 등 기업 재무/경영 이벤트\n        * 임원 선임, 조직 변화, 파트너십 등 주요 기업 동향\n    - 4-6점: 이 회사가 기사에 직접 등장하지만 주인공은 아님 (타사와 비교, 시장 동향 내 언급 등)\n    - 1-3점: 이 회사가 기사에서 짧게 언급되거나 관련 업계 동향만 다루는 뉴스\n    - 0점: 이 회사와 완전히 무관한 뉴스 (동음이의어, 업종 무관)"
 }

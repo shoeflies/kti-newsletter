@@ -24,7 +24,8 @@ Step 1: 뉴스 수집 & 임베딩 기반 중복 제거
 
 Step 2: AI 관련성 필터링 (선택)
   ├─ filter_config.json의 enable_relevance_filter 확인
-  ├─ Gemini 3-Flash로 0-10점 관련성 평가
+  ├─ Gemini Flash로 0-10점 관련성 배치 평가 (회사당 1회 API 호출)
+  ├─ 평가 기준: "이 회사가 기사의 주인공인가?" (주인공 vs 단순 언급 구분)
   ├─ 임계값(기본 6점) 미만 필터링
   └─ Beta 모드: 낮은 점수도 [관련도 낮음] 태그와 함께 포함
 
@@ -43,7 +44,7 @@ Step 3: 담당자별 이메일 발송
 | `utils/fetch_news.py` | Playwright 기반 Naver 뉴스 스크래핑 |
 | `utils/filter_similar_news.py` | Gemini Embedding & AI 필터링 |
 | `utils/email_sender.py` | HTML 이메일 생성 & SMTP 발송 |
-| `utils/data_loader.py` | CSV/JSON 로더 (경로 자동 처리) |
+| `utils/data_loader.py` | CSV/JSON 로더 (경로 자동 처리), 특별 회사 통합 관리 |
 
 ---
 
@@ -66,11 +67,17 @@ Step 3: 담당자별 이메일 발송
 {
   "enable_relevance_filter": true,
   "relevance_threshold": 6,
-  "beta_test_mode": false
+  "beta_test_mode": false,
+  "enable_keyword_prefilter": true,
+  "send_test_copy": false,
+  "relevance_criteria": "- 10점: 이 회사가 기사의 핵심 주인공이고, 회사의 핵심 사업과 직접 관련된 뉴스\n    - 7-9점: ..."
 }
 ```
 
 - 환경변수로 덮어쓰기 가능: `ENABLE_RELEVANCE_FILTER`, `RELEVANCE_THRESHOLD`, `BETA_TEST_MODE`
+- `relevance_criteria`: 관련성 평가 기준 커스터마이징 (없으면 코드 내 `DEFAULT_CRITERIA` 사용)
+- `enable_keyword_prefilter`: 키워드 미포함 기사를 API 호출 없이 0점 처리 (기본 `true`)
+- `send_test_copy`: `true`이면 정식 발송 외에 `TEST_EMAIL`로 복사본 추가 발송
 
 ### user_info.json (9명 담당자)
 
@@ -151,14 +158,48 @@ python3 test_email_quick.py
 ### Gemini API Rate Limiting
 
 ```python
-# 429 에러 방지를 위한 대기 시간
-time.sleep(1)  # Embedding 호출 후
-time.sleep(1)  # AI 필터링 호출 후
+# 429 에러 방지를 위한 대기 시간 (배치 처리 후 1회만)
+time.sleep(1.0)  # Embedding 배치 후
+time.sleep(1.0)  # Flash 배치 후
 ```
 
 - **자동 재시도**: 2s → 5s → 15s → 30s 백오프
 - **임베딩 모델**: `gemini-embedding-001`
 - **생성 모델**: `gemini-3-flash-preview`
+
+### Gemini Flash 구조화 출력
+
+`gemini-3-flash-preview`는 **프롬프트만으로 커스텀 텍스트 포맷을 지키지 않음** ("1:8 2:3", 쉼표 구분 등 모두 불안정).
+배치 스코어링 시 JSON schema 강제 출력만 신뢰할 수 있음:
+
+```python
+response = client.models.generate_content(
+    model=GENERATION_MODEL_NAME,
+    contents=prompt,
+    config=types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema={
+            "type": "array",
+            "items": {"type": "integer", "minimum": 0, "maximum": 10},
+        },
+        temperature=0.1,
+    )
+)
+# 응답 예: "[8, 3, 0, 7]"
+```
+
+### AI 관련성 평가 기준 (주인공 vs 언급)
+
+이전 기준("키워드 명시 여부")은 단순 언급 기사도 고점을 받는 문제가 있었음.
+현재 기준은 "이 회사가 기사의 **주인공**인가?"로 변경:
+
+- **10점**: 이 회사가 핵심 주인공 + 핵심 사업 직접 관련
+- **7-9점**: 이 회사가 주인공이며 IPO/투자/M&A/임원/파트너십 등
+- **4-6점**: 이 회사가 기사에 직접 등장하지만 주인공 아님 (비교, 시장 동향 내 언급)
+- **1-3점**: 이 회사가 짧게 언급되거나 업계 동향만
+- **0점**: 완전히 무관 (동음이의어, 업종 무관)
+
+평가 프롬프트에는 반드시 `회사명`과 `핵심 사업` 모두 포함해야 함.
 
 ### 경로 처리
 
@@ -184,13 +225,15 @@ time.sleep(1)  # AI 필터링 호출 후
 
 **클러스터 기반 대표 뉴스 선택:**
 
-1. 필터링 전 기사 개수가 가장 많은 회사 찾기 (핫토픽)
+1. 필터링 전 기사 개수가 가장 많은 회사 찾기 (핫토픽) — 특별 회사(`KT`, `LP 출자 동향`) 제외
 2. 해당 회사의 뉴스 중 가장 큰 클러스터 선택
-3. 제목 형식: `Portfolio Daily News(MM/DD: {대표 뉴스 20자})`
+3. 제목 형식: `KTI Portfolio Daily News(MM/DD: {대표 뉴스 30자})`
+
+**날짜/연도 기준**: KST (UTC+9) — `datetime.now(timezone(timedelta(hours=9)))`
 
 **예시:**
 ```
-Portfolio Daily News(02/18: AI 스타트업 투자 급증...)
+KTI Portfolio Daily News(02/19: AI 스타트업 투자 급증...)
 ```
 
 ---
@@ -228,11 +271,29 @@ kti-newsletter/
 3. 담당자가 신규라면 `user_info.json`에 이메일 추가
 4. `python3 test.py`로 테스트 (TEST_EMAIL 설정)
 
+### 특별 모니터링 회사 추가/수정 (CSV 외 관리)
+
+CSV에 없는 회사(KT, LP 출자 동향 등)는 `utils/data_loader.py`의 `get_special_companies()` 함수에서 통합 관리합니다.
+
+```python
+def get_special_companies():
+    return {
+        "KT": { ... },
+        "LP 출자 동향": { ... },
+    }
+```
+
+- 이 함수만 수정하면 `main.py`, `test.py`, `email_sender.py` 전체에 자동 반영
+- 특별 회사는 이메일 제목 생성 대상에서 자동 제외 (`SPECIAL_COMPANIES` 상수)
+- 이메일 섹션 순서: 담당 포트폴리오 → 기타 포트폴리오 → 📡 KT 관련 기사 → 💰 LP 출자 동향
+
 ### 필터링 파라미터 조정
 
 1. `filter_config.json` 수정
    - `relevance_threshold`: 점수 조정 (0-10)
    - `beta_test_mode`: 낮은 점수 기사 포함 여부
+   - `enable_keyword_prefilter`: 키워드 없는 기사 사전 제거 (기본 `true`)
+   - `relevance_criteria`: 평가 기준 커스터마이징 (없으면 DEFAULT_CRITERIA 사용)
 2. 로컬에서 `python3 main.py` 테스트
 3. GitHub Secrets의 환경변수로도 덮어쓰기 가능
 
@@ -276,6 +337,12 @@ python3 test_email_preview.py
 
 1. `filter_config.json`의 `relevance_threshold` 낮추기
 2. 또는 `beta_test_mode: true`로 설정하여 낮은 점수 기사도 포함
+
+### 배치 스코어링 결과가 모두 0점
+
+- `gemini-3-flash-preview`가 응답 형식을 지키지 않아 파싱 실패하는 경우
+- `utils/filter_similar_news.py`의 `check_news_relevance_batch()`에서 `response_mime_type="application/json"` + `response_schema` 설정 확인
+- 텍스트 형식 프롬프트만으로는 신뢰할 수 없음 — JSON schema 강제 출력 필수
 
 ---
 
@@ -366,6 +433,7 @@ u + .body .gmail-blend-difference {
   - `get_email_styles()`: CSS 블렌드 모드 정의
   - `get_header_html()`: 헤더 HTML (이중 래퍼, data-ogsc)
   - `format_email_content()`: `<body class="body">` 추가
+  - `get_footer_html()`: 푸터 (연도 KST 기준 자동 업데이트)
 
 ---
 

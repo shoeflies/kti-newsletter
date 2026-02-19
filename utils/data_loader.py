@@ -45,6 +45,22 @@ def load_company_info_from_csv(csv_path="portfolio_news_data.csv"):
     return company_info
 
 
+def get_special_companies():
+    """CSV에 없는 특별 모니터링 회사 정보 반환 (KT, LP 출자 동향 등)"""
+    return {
+        "KT": {
+            "comment": ["국내 최대 통신사이자 디지털 플랫폼 기업으로 ICT, 금융사업, 위성방송서비스사업, 기타사업 등을 영위"],
+            "keyword": ["KT/케이티/KT클라우드/케이티클라우드"],
+            "manager": []
+        },
+        "LP 출자 동향": {
+            "comment": ["국내 주요 기관 LP(모태펀드·성장금융·연기금·공제회 등)의 비상장 벤처펀드 출자 사업 및 공고 동향"],
+            "keyword": ["모태펀드/벤처출자/성장금융/벤처LP/은행/공제회/국민성장펀드"],
+            "manager": []
+        },
+    }
+
+
 def load_filter_config():
     """
     filter_config.json에서 AI 관련성 필터 설정 로드.
@@ -54,7 +70,7 @@ def load_filter_config():
         "relevance_threshold": int,
         "beta_test_mode": bool,
         "enable_keyword_prefilter": bool,
-        "enable_keyword_in_prompt": bool
+        "relevance_criteria": str or None
     }
     """
     out = {
@@ -62,7 +78,7 @@ def load_filter_config():
         "relevance_threshold": 6,
         "beta_test_mode": False,
         "enable_keyword_prefilter": True,
-        "enable_keyword_in_prompt": True,
+        "relevance_criteria": None,  # None이면 코드의 하드코딩된 기본값 사용
     }
     if os.path.isfile(FILTER_CONFIG_PATH):
         try:
@@ -79,9 +95,8 @@ def load_filter_config():
             if "enable_keyword_prefilter" in data:
                 v = data["enable_keyword_prefilter"]
                 out["enable_keyword_prefilter"] = v if isinstance(v, bool) else str(v).lower() in ("true", "1")
-            if "enable_keyword_in_prompt" in data:
-                v = data["enable_keyword_in_prompt"]
-                out["enable_keyword_in_prompt"] = v if isinstance(v, bool) else str(v).lower() in ("true", "1")
+            if "relevance_criteria" in data:
+                out["relevance_criteria"] = data["relevance_criteria"]
         except (json.JSONDecodeError, TypeError, ValueError):
             pass
     # 환경 변수로 덮어쓰기 (선택)

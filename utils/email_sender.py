@@ -482,6 +482,7 @@ def _render_company_news(company, news_detail, beta_test_mode, relevance_thresho
 
 def get_companies_html(news_data, beta_test_mode, relevance_threshold, user_companies=None):
     """회사 섹션 (담당/비담당 구분)"""
+    SPECIAL_COMPANIES = {"KT", "LP 출자 동향"}
     html = ""
 
     # 담당 포트폴리오 섹션
@@ -489,11 +490,11 @@ def get_companies_html(news_data, beta_test_mode, relevance_threshold, user_comp
         html += get_section_header_html("📌 담당 포트폴리오")
 
         for company in user_companies:
-            if company in news_data and company != "KT":  # KT 제외
+            if company in news_data and company not in SPECIAL_COMPANIES:
                 html += _render_company_news(company, news_data[company], beta_test_mode, relevance_threshold)
 
         # 기타 포트폴리오 섹션
-        other_companies = [c for c in news_data.keys() if c not in user_companies and c != "KT"]  # KT 제외
+        other_companies = [c for c in news_data.keys() if c not in user_companies and c not in SPECIAL_COMPANIES]
         if other_companies:
             html += get_section_header_html("📋 기타 포트폴리오")
 
@@ -504,10 +505,15 @@ def get_companies_html(news_data, beta_test_mode, relevance_threshold, user_comp
         if "KT" in news_data:
             html += get_section_header_html("📡 KT 관련 기사")
             html += _render_company_news("KT", news_data["KT"], beta_test_mode, relevance_threshold)
+
+        # LP 출자 동향 섹션 (별도)
+        if "LP 출자 동향" in news_data:
+            html += get_section_header_html("💰 LP 출자 동향")
+            html += _render_company_news("LP 출자 동향", news_data["LP 출자 동향"], beta_test_mode, relevance_threshold)
     else:
-        # user_companies 없으면 기존 방식대로 (KT만 분리)
+        # user_companies 없으면 기존 방식대로 (특별 회사만 분리)
         for company, news_detail in news_data.items():
-            if company != "KT":
+            if company not in SPECIAL_COMPANIES:
                 html += _render_company_news(company, news_detail, beta_test_mode, relevance_threshold)
 
         # KT는 마지막에
@@ -515,17 +521,25 @@ def get_companies_html(news_data, beta_test_mode, relevance_threshold, user_comp
             html += get_section_header_html("📡 KT 관련 기사")
             html += _render_company_news("KT", news_data["KT"], beta_test_mode, relevance_threshold)
 
+        # LP 출자 동향은 KT 아래에
+        if "LP 출자 동향" in news_data:
+            html += get_section_header_html("💰 LP 출자 동향")
+            html += _render_company_news("LP 출자 동향", news_data["LP 출자 동향"], beta_test_mode, relevance_threshold)
+
     return html
 
 
 def get_footer_html():
     """이메일 푸터"""
-    return """
+    from datetime import datetime, timezone, timedelta
+    KST = timezone(timedelta(hours=9))
+    year = datetime.now(KST).year
+    return f"""
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
             <tr>
                 <td class="email-footer">
                     <p>본 메일은 자동으로 발송되었습니다.</p>
-                    <p style="margin-top: 8px;">© 2026 KT Investment Co., Ltd. All rights reserved.</p>
+                    <p style="margin-top: 8px;">© {year} KT Investment Co., Ltd. All rights reserved.</p>
                 </td>
             </tr>
         </table>

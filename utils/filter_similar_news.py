@@ -4,6 +4,7 @@ from google.genai import types
 import numpy as np
 import time
 import os
+import re
 
 # Load environment variables
 load_dotenv()
@@ -20,6 +21,19 @@ client = genai.Client(api_key=gemini_api_key)
 EMBEDDING_MODEL = "gemini-embedding-001"
 # Text generation model for relevance scoring
 GENERATION_MODEL_NAME = "gemini-3-flash-preview"
+
+# 한 번의 Flash API 호출로 평가할 기사 수
+BATCH_SIZE = 10
+
+# 관련성 평가 기준 (filter_config.json의 relevance_criteria로 오버라이드 가능)
+DEFAULT_CRITERIA = """- 10점: 이 회사가 기사의 핵심 주인공이고, 회사의 핵심 사업과 직접 관련된 뉴스
+    - 7-9점: 이 회사가 기사의 주인공이며 다음 중 하나에 해당:
+        * 사업 분야와 밀접하게 관련된 내용
+        * IPO, 상장, 투자 유치, M&A, 인수합병 등 기업 재무/경영 이벤트
+        * 임원 선임, 조직 변화, 파트너십 등 주요 기업 동향
+    - 4-6점: 이 회사가 기사에 직접 등장하지만 주인공은 아님 (타사와 비교, 시장 동향 내 언급 등)
+    - 1-3점: 이 회사가 기사에서 짧게 언급되거나 관련 업계 동향만 다루는 뉴스
+    - 0점: 이 회사와 완전히 무관한 뉴스 (동음이의어, 업종 무관)"""
 
 
 def _is_rate_limit_error(e):
@@ -50,6 +64,23 @@ def get_embedding(text, model=EMBEDDING_MODEL):
     return None  # unreachable
 
 
+def get_embedding_batch(titles, model=EMBEDDING_MODEL):
+    """여러 제목을 한 번의 API 호출로 임베딩"""
+    max_retries = 4
+    wait_times = [2, 5, 15, 30]
+    for attempt in range(max_retries):
+        try:
+            result = client.models.embed_content(model=model, contents=titles)
+            return [emb.values for emb in result.embeddings]
+        except Exception as e:
+            if _is_rate_limit_error(e) and attempt < max_retries - 1:
+                print(f"Rate limit (embedding batch), retrying in {wait_times[attempt]}s...")
+                time.sleep(wait_times[attempt])
+            else:
+                raise
+    return []
+
+
 def cosine_similarity(vec1, vec2):
     vec1 = np.array(vec1)
     vec2 = np.array(vec2)
@@ -57,15 +88,15 @@ def cosine_similarity(vec1, vec2):
 
 
 def filter_similar_titles(titles, threshold=0.60, return_cluster_info=False):
-    embeddings = []
-    for title in titles:
-        try:
-            embedding = get_embedding(title)
-            embeddings.append(embedding)
-            time.sleep(1.0)  # Rate limiting: avoid 429
-        except Exception as e:
-            print(f"Error processing title '{title}': {str(e)}")
-            continue
+    if not titles:
+        return [] if not return_cluster_info else {}
+
+    try:
+        embeddings = get_embedding_batch(titles)  # 1회 호출
+        time.sleep(1.0)                            # 배치 후 1회만 대기
+    except Exception as e:
+        print(f"Embedding batch error: {e}")
+        return [] if not return_cluster_info else {}
 
     if not embeddings:
         return [] if not return_cluster_info else {}
@@ -210,8 +241,158 @@ def check_news_relevance(news_title, news_description, business_content,
     return 0
 
 
+def _parse_batch_scores(answer, expected_count):
+    """JSON 배열, 쉼표 구분, '1:8 2:3' 형식 응답 파싱. 실패 시 0으로 채움"""
+    import json as _json
+    result = [0] * expected_count
+
+    # 0순위: JSON 배열 "[8, 3, 7]"
+    try:
+        parsed = _json.loads(answer)
+        if isinstance(parsed, list):
+            for i, s in enumerate(parsed[:expected_count]):
+                if isinstance(s, (int, float)):
+                    result[i] = int(s) if 0 <= int(s) <= 10 else 0
+            return result
+    except Exception:
+        pass
+
+    # 1순위: "1:8 2:3 3:7" 형식 (번호:점수)
+    numbered = re.findall(r'(\d+)\s*:\s*(\d+)', answer)
+    if numbered:
+        for num_str, score_str in numbered:
+            idx = int(num_str) - 1
+            if 0 <= idx < expected_count:
+                score = int(score_str)
+                result[idx] = score if 0 <= score <= 10 else 0
+        return result
+
+    # 2순위: 쉼표/줄바꿈 구분 숫자 목록 ("8, 2, 1, 0")
+    parts = re.split(r'[,\n]+', answer.strip())
+    nums = []
+    for p in parts:
+        p = p.strip()
+        m = re.search(r'\b(\d+)\b\s*$', p)
+        if m:
+            nums.append(int(m.group(1)))
+    if len(nums) >= 1:
+        for i, s in enumerate(nums[:expected_count]):
+            result[i] = s if 0 <= s <= 10 else 0
+        return result
+
+    # 3순위: 숫자 하나 (기사 1개 배치 전용)
+    if expected_count == 1:
+        bare = re.search(r'^\s*(\d+)\s*$', answer)
+        if bare:
+            score = int(bare.group(1))
+            result[0] = score if 0 <= score <= 10 else 0
+
+    return result
+
+
+def check_news_relevance_batch(news_items, business_content, company_name="",
+                                keywords=None, enable_keyword_prefilter=True):
+    """
+    여러 기사를 BATCH_SIZE 단위로 나눠 일괄 평가.
+    반환: [score, score, ...] (news_items와 동일 순서)
+    """
+    from utils.data_loader import load_filter_config
+
+    if not news_items:
+        return []
+
+    if keywords is None:
+        keywords = []
+
+    criteria = load_filter_config().get("relevance_criteria") or DEFAULT_CRITERIA
+
+    # 사전 키워드 필터링 (API 호출 없이 0점 처리)
+    scores = [None] * len(news_items)
+    items_to_score = []  # (원본_인덱스, title, description)
+    if enable_keyword_prefilter and (company_name or keywords):
+        all_keywords = ([company_name] + keywords) if company_name else keywords
+        for i, news_item in enumerate(news_items):
+            title, description = news_item[0], news_item[1]
+            news_text = f"{title} {description}".lower()
+            if any(kw.lower() in news_text for kw in all_keywords if kw):
+                items_to_score.append((i, title, description))
+            else:
+                scores[i] = 0
+    else:
+        items_to_score = [(i, item[0], item[1]) for i, item in enumerate(news_items)]
+
+    if not items_to_score:
+        return [s if s is not None else 0 for s in scores]
+
+    system_instruction = "당신은 뉴스 기사와 회사 사업의 관련성을 평가하는 전문가입니다. 숫자만 쉼표로 구분하여 답변하세요."
+
+    for batch_start in range(0, len(items_to_score), BATCH_SIZE):
+        batch = items_to_score[batch_start:batch_start + BATCH_SIZE]
+
+        n = len(batch)
+        articles_lines = ""
+        for seq, (_, title, description) in enumerate(batch, 1):
+            articles_lines += f"{seq}. 제목: {title} | 내용: {description[:120]}\n"
+
+        prompt = f"""다음 뉴스 기사들이 아래 회사의 핵심 사업과 얼마나 관련 있는지 각각 0-10으로 평가해주세요.
+
+회사명: {company_name}
+핵심 사업: {business_content}
+
+뉴스 기사 ({n}개):
+{articles_lines}
+평가 기준:
+{criteria}
+
+기사 {n}개의 점수를 순서대로 쉼표로 구분하여 숫자만 답해주세요. (예: 8, 3, 0, 7)"""
+
+        max_retries = 4
+        wait_times = [5, 15, 30, 60]
+        batch_scores = None
+
+        json_schema = {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 0, "maximum": 10},
+            "minItems": n,
+            "maxItems": n,
+        }
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model=GENERATION_MODEL_NAME,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        response_mime_type="application/json",
+                        response_schema=json_schema,
+                        temperature=0.1,
+                    )
+                )
+                answer = response.text.strip() if response.text else ""
+                batch_scores = _parse_batch_scores(answer, len(batch))
+                break
+            except Exception as e:
+                if _is_rate_limit_error(e) and attempt < max_retries - 1:
+                    print(f"Rate limit (batch scoring), retrying in {wait_times[attempt]}s...")
+                    time.sleep(wait_times[attempt])
+                else:
+                    print(f"Batch scoring error: {e}, defaulting to 0")
+                    batch_scores = [0] * len(batch)
+                    break
+
+        if batch_scores is None:
+            batch_scores = [0] * len(batch)
+
+        for (orig_idx, _, _), score in zip(batch, batch_scores):
+            scores[orig_idx] = score
+
+        time.sleep(1.0)  # 배치 후 1회만 대기
+
+    return [s if s is not None else 0 for s in scores]
+
+
 def filter_news_by_relevance(news_data, company_info, threshold=6, beta_mode=False,
-                            enable_keyword_prefilter=True, enable_keyword_in_prompt=True):
+                            enable_keyword_prefilter=True):
     """
     AI 기반 관련성 점수로 뉴스 필터링
 
@@ -221,7 +402,6 @@ def filter_news_by_relevance(news_data, company_info, threshold=6, beta_mode=Fal
         threshold: 관련성 임계값
         beta_mode: 베타 모드
         enable_keyword_prefilter: 사전 키워드 필터링 활성화
-        enable_keyword_in_prompt: 프롬프트에 키워드 정보 포함
     """
     from utils.data_loader import load_filter_config
 
@@ -252,19 +432,17 @@ def filter_news_by_relevance(news_data, company_info, threshold=6, beta_mode=Fal
         else:
             keywords = []
 
+        total_news += len(news_list)
+        scores = check_news_relevance_batch(
+            news_list, business_content,
+            company_name=company,
+            keywords=keywords,
+            enable_keyword_prefilter=enable_keyword_prefilter,
+        )
+
         filtered_news = []
-        for news_item in news_list:
-            total_news += 1
+        for news_item, score in zip(news_list, scores):
             title, description, link = news_item
-
-            score = check_news_relevance(
-                title, description, business_content,
-                company_name=company,
-                keywords=keywords,
-                enable_keyword_prefilter=enable_keyword_prefilter,
-                enable_keyword_in_prompt=enable_keyword_in_prompt
-            )
-
             print(f"  [{company}] Score: {score}/10 - {title[:50]}...")
 
             if beta_mode:
@@ -281,8 +459,6 @@ def filter_news_by_relevance(news_data, company_info, threshold=6, beta_mode=Fal
                     filtered_news_count += 1
                 else:
                     print(f"    → Filtered out (score {score} < threshold {threshold})")
-
-            time.sleep(1.0)  # 429 방지
 
         if filtered_news:
             filtered_news_data[company] = filtered_news
