@@ -9,7 +9,7 @@ from tqdm import tqdm
 from utils.data_loader import load_company_info_from_csv, load_filter_config, get_special_companies
 from utils.email_sender import format_email_content, send_email
 from utils.filter_similar_news import filter_similar_titles, filter_news_by_relevance
-from utils.fetch_news import make_target_url, fetch_news
+from utils.fetch_news import make_target_url, fetch_news, fetch_news_for_company
 import os
 import asyncio
 from datetime import datetime, timezone, timedelta
@@ -48,6 +48,8 @@ company_info.update(get_special_companies())
 # 테스트용 user_info: 한 명만, TEST_EMAIL로
 user_info = {TEST_USER_NAME: {"email": [TEST_EMAIL]}}
 
+CONCURRENT_LIMIT = 6  # 동시 처리 회사 수
+
 news_dict = {}
 
 print("\n" + "=" * 60)
@@ -57,6 +59,15 @@ print(f"Companies: {list(company_info.keys())}")
 print(f"Recipient: {TEST_EMAIL} ({TEST_USER_NAME})")
 print("Relevance filter (2.5-flash): OFF → 임베딩 중복 제거만 실행")
 print("=" * 60 + "\n")
+
+
+async def _fetch_company(company, detail, semaphore):
+    """Phase A: 회사 1개의 모든 키워드 수집 (세마포어로 동시성 제한)"""
+    async with semaphore:
+        keywords = [kw.strip() for kw in detail["keyword"][0].split("/")]
+        articles = await fetch_news_for_company(keywords)
+        print(f"  Fetched {company}: {len(articles)} articles")
+        return company, articles
 
 
 def reorder_news_dict(news_dict, user_companies):
@@ -137,17 +148,18 @@ async def main():
     # 각 뉴스의 클러스터 크기 저장
     cluster_sizes = {}
 
-    # Step 1: 키워드로 뉴스 검색 + 임베딩 유사도 중복 제거 (첫 번째 로직)
-    print("\n=== Step 1: Fetching news and removing duplicates (embedding) ===")
-    for company, detail in tqdm(company_info.items()):
-        await asyncio.sleep(1.5)
-        articles = []
-        for keyword in detail["keyword"][0].split("/"):
-            target_url = make_target_url(keyword)
-            articles += await fetch_news(target_url)
-            await asyncio.sleep(1.5)
-            print(company, ":", keyword)
+    # Step 1-A: 병렬 뉴스 수집
+    print(f"\n=== Step 1-A: Fetching news (parallel, limit={CONCURRENT_LIMIT}) ===")
+    semaphore = asyncio.Semaphore(CONCURRENT_LIMIT)
+    fetch_tasks = [
+        _fetch_company(company, detail, semaphore)
+        for company, detail in company_info.items()
+    ]
+    fetch_results = await asyncio.gather(*fetch_tasks)
 
+    # Step 1-B: 순차 임베딩 중복 제거 (기존과 동일)
+    print("\n=== Step 1-B: Removing duplicates (embedding) ===")
+    for company, articles in tqdm(fetch_results):
         # 필터링 전 기사 개수 저장 (많을수록 핫토픽)
         pre_filter_counts[company] = len(articles)
 

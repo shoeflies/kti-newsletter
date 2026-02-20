@@ -1,14 +1,22 @@
+import asyncio
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from playwright.async_api import async_playwright
+
+KST = timezone(timedelta(hours=9))
 
 
 def get_search_interval():
-    current_time = datetime.now()
-    one_day_ago = current_time - timedelta(days=1)
-    current_time_str = current_time.strftime("%Y.%m.%d.%H.%M")
-    one_day_ago_str = one_day_ago.strftime("%Y.%m.%d.%H.%M")
-    return current_time_str, one_day_ago_str
+    now = datetime.now(KST)
+    today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # 월요일(weekday=0)이면 금요일 자정(3일 전)부터, 그 외엔 전날 자정부터
+    if now.weekday() == 0:
+        start = today_midnight - timedelta(days=3)
+    else:
+        start = today_midnight - timedelta(days=1)
+
+    return now.strftime("%Y.%m.%d.%H.%M"), start.strftime("%Y.%m.%d.%H.%M")
 
 
 def make_target_url(search_keyword):
@@ -53,4 +61,36 @@ async def fetch_news(target_url):
         content_span = card.select_one("span.sds-comps-text-ellipsis-3")
         content = content_span.get_text(" ", strip=True) if content_span else ""
         articles.append((title, content, link))
+    return articles
+
+
+async def fetch_news_for_company(keywords: list) -> list:
+    """하나의 브라우저로 회사의 모든 키워드를 순차 검색 (브라우저 재사용)"""
+    articles = []
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        for keyword in keywords:
+            url = make_target_url(keyword.strip())
+            page = await browser.new_page()
+            try:
+                await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                try:
+                    await page.wait_for_selector("div.sds-comps-base-layout", timeout=10000)
+                except Exception:
+                    pass
+                html = await page.content()
+                soup = BeautifulSoup(html, "html.parser")
+                for card in soup.select("div.sds-comps-base-layout"):
+                    title_span = card.select_one("span.sds-comps-text-type-headline1")
+                    if not title_span:
+                        continue
+                    title = title_span.get_text(" ", strip=True)
+                    link = title_span.find_parent("a")["href"]
+                    content_span = card.select_one("span.sds-comps-text-ellipsis-3")
+                    content = content_span.get_text(" ", strip=True) if content_span else ""
+                    articles.append((title, content, link))
+            finally:
+                await page.close()
+            await asyncio.sleep(1.5)
+        await browser.close()
     return articles
