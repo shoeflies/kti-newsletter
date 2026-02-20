@@ -27,7 +27,11 @@ async def fetch_html(url: str) -> str:
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
-        await page.goto(url, wait_until="networkidle")  # JS 렌더링 끝까지 대기
+        await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        try:
+            await page.wait_for_selector("div.sds-comps-base-layout", timeout=10000)
+        except Exception:
+            pass  # 검색 결과 없음
         html = await page.content()
         await browser.close()
         return html
