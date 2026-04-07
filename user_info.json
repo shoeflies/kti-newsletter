@@ -1,7 +1,4 @@
 {
-    "배한철":{
-        "email": "hanchul.bae@kti.vc"
-    },
     "박정환":{
         "email": "park.pppjh@kt.com"
     },
@@ -22,5 +19,8 @@
     },
     "조영모":{
         "email": "yungmo.cho@kti.vc"
+    },
+    "김명섭":{
+        "email": "mskim.ca@kti.vc"
     }
 }
