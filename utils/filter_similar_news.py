@@ -20,7 +20,7 @@ client = genai.Client(api_key=gemini_api_key)
 # Embedding model (Gemini)
 EMBEDDING_MODEL = "gemini-embedding-001"
 # Text generation model for relevance scoring
-GENERATION_MODEL_NAME = "gemini-3-flash-preview"
+GENERATION_MODEL_NAME = "gemini-3.1-flash-lite"
 
 # 한 번의 Flash API 호출로 평가할 기사 수
 BATCH_SIZE = 10
