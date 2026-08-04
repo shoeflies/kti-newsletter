@@ -25,6 +25,12 @@ GENERATION_MODEL_NAME = "gemini-3.1-flash-lite"
 # 한 번의 Flash API 호출로 평가할 기사 수
 BATCH_SIZE = 10
 
+# 제목에 회사명/키워드가 없는 기사에 주는 감점.
+# 제목에 없으면 이 회사가 주인공이 아닐 가능성이 높지만, 사명 없이 주인공인 기획기사도 있어
+# 상한(캡)으로 잘라내지 않고 감점으로 완화한다. 모델이 단독으로 높게 본 기사는 살아남는다.
+# 3점: 실측에서 오탐은 원점수 8점, 사명 없이 주인공인 기사는 10점에 몰려 이 선에서 갈렸다.
+NON_HEADLINE_PENALTY = 3
+
 # 관련성 평가 기준 (filter_config.json의 relevance_criteria로 오버라이드 가능)
 DEFAULT_CRITERIA = """- 10점: 이 회사가 기사의 핵심 주인공이고, 회사의 핵심 사업과 직접 관련된 뉴스
     - 7-9점: 이 회사가 기사의 주인공이며 다음 중 하나에 해당:
@@ -324,6 +330,21 @@ def check_news_relevance_batch(news_items, business_content, company_name="",
     if not items_to_score:
         return [s if s is not None else 0 for s in scores]
 
+    # 제목에 회사명/키워드가 없으면 이 회사가 주인공인 기사가 아닐 가능성이 높다.
+    # 프롬프트 규칙만으로는 모델이 이 판정을 지키지 않아 코드에서 감점을 적용한다.
+    # 주제 모니터링 항목(LP 출자 동향)은 "주인공" 기준이 성립하지 않아 감점하지 않는다.
+    from utils.data_loader import get_special_companies
+
+    is_topic_monitor = (
+        get_special_companies().get(company_name, {}).get("topic_monitor", False)
+    )
+    apply_title_penalty = not is_topic_monitor
+    title_keywords = [
+        re.sub(r"\s+", "", kw).lower()
+        for kw in ([company_name] + keywords if company_name else keywords)
+        if kw
+    ]
+
     system_instruction = "당신은 뉴스 기사와 회사 사업의 관련성을 평가하는 전문가입니다. 숫자만 쉼표로 구분하여 답변하세요."
 
     for batch_start in range(0, len(items_to_score), BATCH_SIZE):
@@ -332,12 +353,27 @@ def check_news_relevance_batch(news_items, business_content, company_name="",
         n = len(batch)
         articles_lines = ""
         for seq, (_, title, description) in enumerate(batch, 1):
-            articles_lines += f"{seq}. 제목: {title} | 내용: {description[:120]}\n"
+            articles_lines += f"{seq}. 제목: {title} | 내용: {description[:250]}\n"
+
+        keyword_line = ""
+        if keywords:
+            keyword_line = f"\n관련 키워드: {', '.join(kw for kw in keywords if kw)}"
+
+        if is_topic_monitor:
+            rules = """1. 제목과 내용 어디에도 위 키워드와 관련된 소재가 없으면, 분야가 유사해도 최대 3점입니다.
+2. 이 주제가 기사의 부수적 배경으로만 스쳐 언급되면 최대 5점입니다."""
+        else:
+            rules = """1. 제목과 내용 어디에도 위 회사명이나 키워드가 등장하지 않으면, 사업 분야가 유사해도 최대 3점입니다.
+2. 키워드가 이 회사와 무관한 문맥으로 쓰였다면(동명의 스포츠단·e스포츠팀, 일반 미용·기술 용어 등) 0점입니다.
+3. 이 회사가 기사의 주인공이 아니라 인용·비교·목록 나열로만 등장하면 최대 5점입니다. 제목에 회사명이나 키워드가 없는 기사는 대부분 이 경우에 해당합니다."""
 
         prompt = f"""다음 뉴스 기사들이 아래 회사의 핵심 사업과 얼마나 관련 있는지 각각 0-10으로 평가해주세요.
 
 회사명: {company_name}
-핵심 사업: {business_content}
+핵심 사업: {business_content}{keyword_line}
+
+반드시 지킬 규칙:
+{rules}
 
 뉴스 기사 ({n}개):
 {articles_lines}
@@ -383,7 +419,11 @@ def check_news_relevance_batch(news_items, business_content, company_name="",
         if batch_scores is None:
             batch_scores = [0] * len(batch)
 
-        for (orig_idx, _, _), score in zip(batch, batch_scores):
+        for (orig_idx, title, _), score in zip(batch, batch_scores):
+            if apply_title_penalty and score:
+                title_norm = re.sub(r"\s+", "", title).lower()
+                if not any(kw in title_norm for kw in title_keywords):
+                    score = max(0, score - NON_HEADLINE_PENALTY)
             scores[orig_idx] = score
 
         time.sleep(1.0)  # 배치 후 1회만 대기

@@ -4,6 +4,7 @@ from utils.email_sender import format_email_content, send_email
 from utils.filter_similar_news import filter_similar_titles, filter_news_by_relevance
 from utils.fetch_news import make_target_url, fetch_news, fetch_news_for_company
 import os
+import sys
 import asyncio
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
@@ -137,6 +138,8 @@ async def main():
 
     # Step 1-B: 순차 임베딩 중복 제거 (기존과 동일)
     print("\n=== Step 1-B: Removing duplicates (embedding) ===")
+    # 수집된 기사가 있는데 중복 제거 결과가 비면 임베딩 호출 실패 (정상이면 최소 1건은 남음)
+    embedding_failures = []
     for company, articles in tqdm(fetch_results):
         # 필터링 전 기사 개수 저장 (많을수록 핫토픽)
         pre_filter_counts[company] = len(articles)
@@ -147,13 +150,23 @@ async def main():
 
         filtered_articles = [articles[i] for i in cluster_info.keys()]
 
+        if articles and not filtered_articles:
+            embedding_failures.append(company)
+
         if len(filtered_articles) != 0:
             news_dict[company] = filtered_articles
             # 클러스터 크기 정보를 제목 기반으로 저장 (순서 변경에 안전)
             cluster_sizes[company] = {articles[idx][0]: size for idx, size in cluster_info.items()}
             news_count += len(filtered_articles)
 
+    if embedding_failures:
+        print(f"\n⚠️  Embedding failed for {len(embedding_failures)} companies: {', '.join(embedding_failures)}")
+
     if news_count == 0:
+        if embedding_failures:
+            # 조용히 성공 종료하면 미발송을 알아챌 수 없으므로 실패로 끝낸다
+            print("ERROR: All embedding calls failed - no news to send")
+            sys.exit(1)
         print("No news found")
         return
 
