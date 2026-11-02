@@ -1,6 +1,6 @@
 {
   "enable_relevance_filter": true,
-  "relevance_threshold": 6,
+  "relevance_threshold": 7,
   "beta_test_mode": false,
   "enable_keyword_prefilter": true,
   "send_test_copy": false,
