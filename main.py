@@ -3,6 +3,7 @@ from utils.data_loader import load_json, load_company_info_from_csv, load_filter
 from utils.email_sender import format_email_content, send_email
 from utils.filter_similar_news import filter_similar_titles, filter_news_by_relevance
 from utils.fetch_news import make_target_url, fetch_news, fetch_news_for_company
+from utils.funding_news import collect_funding_deals
 import os
 import sys
 import asyncio
@@ -213,6 +214,14 @@ async def main():
         print("\n=== Step 2: AI relevance filtering is DISABLED ===")
         print("Set enable_relevance_filter to true in filter_config.json to enable it")
 
+    # Step 3: 국내 스타트업 투자 유치 딜 수집 (실패해도 뉴스레터 발송은 계속)
+    print("\n=== Step 3: Collecting funding deals ===")
+    try:
+        funding_deals = await collect_funding_deals()
+    except Exception as e:
+        print(f"⚠️  Funding deals collection failed: {e}")
+        funding_deals = []
+
     # 테스트 복사본 발송 설정 확인
     send_test_copy = filter_cfg.get("send_test_copy", False)
     test_email = os.environ.get("TEST_EMAIL")
@@ -247,7 +256,7 @@ async def main():
             result_dict[company]["pre_filter_count"] = pre_filter_counts.get(company, 0)
             result_dict[company]["cluster_sizes"] = cluster_sizes.get(company, {})
 
-        email_body = format_email_content(result_dict, user_name, user_companies)
+        email_body = format_email_content(result_dict, user_name, user_companies, funding_deals)
         email_subject = generate_email_subject(result_dict, user_companies)
 
         # 정식 발송

@@ -74,6 +74,32 @@ dummy_news_data = {
     }
 }
 
+# 더미 투자 유치 딜 (밸류/홈페이지 있음 / 투자사/홈페이지 없음 케이스)
+dummy_funding_deals = [
+    {
+        "company": "무빈",
+        "business": "라이다 기반 3차원 모션 데이터 AI 기술 개발",
+        "series": "시리즈A",
+        "amount": "100억원",
+        "valuation": "800억원",
+        "investors": ["IMM인베스트먼트(리드)", "IBK기업은행", "보이저벤처스", "에이티넘인베스트먼트", "네이버 D2SF", "슈미트"],
+        "title": "무빈, 시리즈 A 100억원 투자 유치…로봇 학습용 모션 데이터 기술 확장",
+        "url": "https://example.com/12",
+        "homepage": "https://example.com/movin",
+    },
+    {
+        "company": "프리모테라",
+        "business": "고려대 교내벤처 출신 신약 개발",
+        "series": "프리A",
+        "amount": "미공개",
+        "valuation": "미공개",
+        "investors": [],
+        "title": "프리모테라, 프리A 투자유치 완료 [시그널]",
+        "url": "https://example.com/13",
+        "homepage": "",
+    },
+]
+
 # 테스트 설정
 user_name = "테스트 사용자"
 user_companies = ["힐링페이퍼", "클래스101"]  # 담당 회사
@@ -88,7 +114,7 @@ print("=" * 60 + "\n")
 
 # HTML 이메일 생성
 print("📧 Generating email HTML...")
-email_body = format_email_content(dummy_news_data, user_name, user_companies)
+email_body = format_email_content(dummy_news_data, user_name, user_companies, dummy_funding_deals)
 email_subject = "Portfolio Daily News - Quick Test"
 
 # 이메일 발송

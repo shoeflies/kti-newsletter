@@ -271,6 +271,55 @@ def get_email_styles():
             margin: 8px 0 0 0;
         }
 
+        /* 투자 유치 카드 */
+        .series-badge {
+            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 5px;
+            vertical-align: middle;
+            background-color: #6B7280;
+            color: #FFFFFF;
+        }
+
+        .homepage-link {
+            font-size: 15px;
+            text-decoration: none;
+            vertical-align: middle;
+        }
+
+        .funding-table {
+            margin: 8px 0 0 0;
+            border-collapse: collapse;
+        }
+
+        .funding-label {
+            color: #6B7280;
+            font-size: 14px;
+            line-height: 1.4;
+            padding: 2px 12px 2px 0;
+            white-space: nowrap;
+            vertical-align: top;
+        }
+
+        .funding-value {
+            color: #1E1E1E;
+            font-size: 14px;
+            line-height: 1.4;
+            padding: 2px 0;
+        }
+
+        .funding-article {
+            display: block;
+            color: #D93931;
+            font-size: 14px;
+            line-height: 1.4;
+            text-decoration: none;
+            margin: 8px 0 0 0;
+        }
+
 
         /* 푸터 */
         .email-footer {
@@ -357,6 +406,14 @@ def get_email_styles():
             }
 
             .company-keywords strong {
+                color: #E5E7EB !important;
+            }
+
+            .funding-label {
+                color: #9CA3AF !important;
+            }
+
+            .funding-value {
                 color: #E5E7EB !important;
             }
         }
@@ -529,6 +586,49 @@ def get_companies_html(news_data, beta_test_mode, relevance_threshold, user_comp
     return html
 
 
+def get_funding_html(funding_deals):
+    """최근 투자 유치 섹션 (딜이 없으면 섹션 생략)"""
+    if not funding_deals:
+        return ""
+
+    html = get_section_header_html("💸 최근 투자 유치")
+    html += """
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td style="padding: 0 16px;">
+                    <div class="company-section">
+    """
+
+    for deal in funding_deals:
+        investors = ", ".join(deal["investors"]) or "미공개"
+        # 홈페이지는 검증된 경우만 회사명 옆 아이콘으로 표시
+        homepage_icon = (
+            f'<a href="{deal["homepage"]}" target="_blank" class="homepage-link" title="홈페이지">🌐</a> '
+            if deal["homepage"] else ""
+        )
+        html += f"""
+            <div class="news-card">
+                <h3 class="news-title">{deal['company']} {homepage_icon}<span class="series-badge">{deal['series']}</span></h3>
+                <table role="presentation" class="funding-table" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td class="funding-label">사업개요</td><td class="funding-value">{deal['business']}</td></tr>
+                    <tr><td class="funding-label">투자금액</td><td class="funding-value">{deal['amount']}</td></tr>
+                    <tr><td class="funding-label">기업가치</td><td class="funding-value">{deal['valuation']}</td></tr>
+                    <tr><td class="funding-label">투자사</td><td class="funding-value">{investors}</td></tr>
+                </table>
+                <a href="{deal['url']}" target="_blank" class="funding-article">📰 {deal['title']}</a>
+            </div>
+        """
+
+    html += """
+                    </div>
+                </td>
+            </tr>
+        </table>
+    """
+
+    return html
+
+
 def get_footer_html():
     """이메일 푸터"""
     from datetime import datetime, timezone, timedelta
@@ -546,7 +646,7 @@ def get_footer_html():
     """
 
 
-def format_email_content(news_data, user_name, user_companies=None):
+def format_email_content(news_data, user_name, user_companies=None, funding_deals=None):
     """이메일 콘텐츠 포맷팅"""
     from utils.data_loader import load_filter_config
 
@@ -572,6 +672,7 @@ def format_email_content(news_data, user_name, user_companies=None):
                 {get_header_html(user_name)}
                 {get_update_notice_html()}
                 {get_companies_html(news_data, beta_test_mode, relevance_threshold, user_companies)}
+                {get_funding_html(funding_deals)}
                 {get_footer_html()}
             </td>
         </tr>
