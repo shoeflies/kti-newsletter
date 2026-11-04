@@ -4,7 +4,7 @@
 
 76개 포트폴리오 회사의 뉴스를 자동으로 수집·필터링하여 담당자별로 이메일 발송하는 자동화 봇입니다.
 
-- **자동 실행**: GitHub Actions (월-금 오전 7시 30분 KST)
+- **자동 실행**: GitHub Actions (월-금 오전 7시 KST)
 - **핵심 기능**: 키워드 검색 → 임베딩 중복 제거 → AI 관련성 필터 → 이메일 발송
 - **처리량**: 76개 회사, 8명 담당자
 
@@ -147,7 +147,7 @@ python3 test_email_quick.py
 
 ### GitHub Actions
 
-- `.github/workflows/daily-news.yml` - 정식 자동 실행 (월-금 오전 7시 30분 KST)
+- `.github/workflows/daily-news.yml` - 정식 자동 실행 (월-금 오전 7시 KST)
 - `.github/workflows/test-news.yml` - 테스트 워크플로우
 - **필수 Secrets**: `GEMINI_API_KEY`, `SMTP_SERVER`, `SMTP_PORT`, `EMAIL_LOGIN`, `EMAIL_PASSWORD`
 
