@@ -18,6 +18,8 @@ from utils.filter_similar_news import client, GENERATION_MODEL_NAME, BATCH_SIZE,
 # 네이버가 따옴표 정확 일치를 지키지 않아 한국시리즈 암표, 지자체 기업유치 기사가 섞인다 → 분류 단계에서 걸러냄
 # "브릿지 투자", "투자를 유치했다"는 실측에서 결과가 전부 노이즈라 제외
 FUNDING_KEYWORDS = ["시리즈A 투자", "시리즈B 투자", "시리즈C 투자", "프리A 투자", "시드 투자", "투자 유치"]
+# 제목에 이 중 하나는 있어야 투자 유치가 주제인 기사로 본다 (공백 제거 후 비교)
+FUNDING_TITLE_TERMS = ("투자", "유치", "조달", "펀딩", "시리즈", "시드", "라운드", "확보")
 
 # 본문이 이보다 짧으면 추출 실패로 보고 스니펫만 사용
 MIN_BODY_LENGTH = 200
@@ -340,8 +342,12 @@ async def collect_funding_deals():
         if not company:
             continue
         key = _normalize_company(company)
+        compact_title = re.sub(r"\s+", "", article[0]).lower()
         # 투자 동향 기사 속 한 줄 언급(트리오어 사례)은 프롬프트로 걸러지지 않아, 제목에 사명이 있는 기사만 남긴다
-        if key not in re.sub(r"\s+", "", article[0]).lower():
+        if key not in compact_title:
+            continue
+        # 수상/인터뷰 기사 속 "최근 투자를 유치했다" 한 줄 언급(주미당, 바이엘티 사례)도 같은 이유로 제목에 투자 표현이 있는 기사만 남긴다
+        if not any(term in compact_title for term in FUNDING_TITLE_TERMS):
             continue
         if key not in groups:
             groups[key] = (company, [])
